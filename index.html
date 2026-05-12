@@ -835,7 +835,7 @@
                 <div style="font-size: 24px; font-weight: 800; margin-bottom: 15px;">
                     3xAdm<span style="color: #ffd700;">.</span>
                 </div>
-                <p style="font-size: 14px; opacity: 0.8; line-height: 1.6;">
+                <p style="font-size: 14px; opacity: 0.9; line-height: 1.6;">
                     Facilitamos o ensino da administração para concursos. Material sério, didático e focado na sua aprovação.
                 </p>
             </div>
@@ -843,23 +843,28 @@
             <div style="flex: 1; min-width: 150px;">
                 <h4 style="margin-bottom: 20px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;">Navegação</h4>
                 <ul style="list-style: none; padding: 0; font-size: 14px; line-height: 2.5;">
-                    <li><a href="#beneficios" style="color: rgba(255,255,255,0.7); text-decoration: none;">Benefícios</a></li>
-                    <li><a href="#feedbacks" style="color: rgba(255,255,255,0.7); text-decoration: none;">Feedbacks</a></li>
-                    <li><a href="#catalogo" style="color: rgba(255,255,255,0.7); text-decoration: none;">Materiais</a></li>
-                    <li><a href="#faq" style="color: rgba(255,255,255,0.7); text-decoration: none;">Perguntas Frequentes</a></li>
+                    <li><a href="#beneficios" style="color: #fff; text-decoration: none; opacity: 0.8;">Benefícios</a></li>
+                    <li><a href="#feedbacks" style="color: #fff; text-decoration: none; opacity: 0.8;">Feedbacks</a></li>
+                    <li><a href="#catalogo" style="color: #fff; text-decoration: none; opacity: 0.8;">Materiais</a></li>
+                    <li><a href="#faq" style="color: #fff; text-decoration: none; opacity: 0.8;">Perguntas Frequentes</a></li>
                 </ul>
             </div>
 
             <div style="flex: 1; min-width: 200px;">
                 <h4 style="margin-bottom: 20px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;">Contato</h4>
-                <p style="font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">📸 @3vezesadm</p>
-                <p style="font-size: 14px; color: rgba(255,255,255,0.7);">✉️ tresvezesadm@gmail.com</p>
+                <p style="font-size: 15px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" width="20" height="20" alt="Instagram">
+                    <a href="https://instagram.com/3vezesadm" target="_blank" style="color: #fff; text-decoration: none;">@3vezesadm</a>
+                </p>
+                <p style="font-size: 15px; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 18px;">✉️</span> tresvezesadm@gmail.com
+                </p>
             </div>
         </div>
 
-        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; font-size: 13px; opacity: 0.7;">
-            <p>© 2026 3xAdm. Todos os direitos reservados.</p>
-            <p>Desenvolvido com 💛 para concurseiros</p>
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; font-size: 14px;">
+            <p style="opacity: 0.7;">© 2026 3xAdm. Todos os direitos reservados.</p>
+            <p style="font-weight: 600;">Desenvolvido com <span style="color: #ffcc00; font-size: 20px;">💛</span> para concurseiros</p>
         </div>
         
         <p style="text-align: center; font-size: 10px; opacity: 0.4; margin-top: 25px;">
@@ -869,7 +874,7 @@
 </footer>
 
 <script>
-    // Scripts essenciais para o site funcionar
+    // Mantendo os comandos do site funcionando
     const navbar = document.getElementById('navbar');
     window.addEventListener('scroll', () => {
         if (window.scrollY > 20) { navbar.classList.add('scrolled'); }
@@ -882,9 +887,11 @@
         hamburger.addEventListener('click', () => { mobileMenu.classList.toggle('open'); });
     }
 
-    mobileMenu.querySelectorAll('a').forEach(a => {
-        a.addEventListener('click', () => { mobileMenu.classList.remove('open'); });
-    });
+    if(mobileMenu) {
+        mobileMenu.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', () => { mobileMenu.classList.remove('open'); });
+        });
+    }
 
     document.querySelectorAll('.faq-q').forEach(btn => {
         btn.addEventListener('click', () => {
