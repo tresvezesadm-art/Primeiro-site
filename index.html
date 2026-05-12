@@ -827,7 +827,7 @@
   </div>
 </section>
 
-<footer style="background: #0d1b3e; padding: 60px 20px; color: white; border-top: 1px solid rgba(255,255,255,0.1);">
+<footer style="background: #0d1b3e; padding: 60px 20px; color: white; border-top: 1px solid rgba(255,255,255,0.1); font-family: sans-serif;">
     <div style="max-width: 1100px; margin: 0 auto;">
         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 40px; text-align: left; margin-bottom: 40px;">
             
@@ -841,101 +841,74 @@
             </div>
 
             <div style="flex: 1; min-width: 150px;">
-                <h4 style="margin-bottom: 20px; font-size: 16px;">Navegação</h4>
-                <ul style="list-style: none; padding: 0; font-size: 14px; line-height: 2.2;">
+                <h4 style="margin-bottom: 20px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;">Navegação</h4>
+                <ul style="list-style: none; padding: 0; font-size: 14px; line-height: 2.5;">
                     <li><a href="#beneficios" style="color: rgba(255,255,255,0.7); text-decoration: none;">Benefícios</a></li>
                     <li><a href="#feedbacks" style="color: rgba(255,255,255,0.7); text-decoration: none;">Feedbacks</a></li>
-                    <li><a href="#catalogo" style="color: rgba(255,255,255,0.7); text-decoration: none;">Catálogo de Materiais</a></li>
-                    <li><a href="#como-funciona" style="color: rgba(255,255,255,0.7); text-decoration: none;">Como Funciona</a></li>
+                    <li><a href="#catalogo" style="color: rgba(255,255,255,0.7); text-decoration: none;">Materiais</a></li>
                     <li><a href="#faq" style="color: rgba(255,255,255,0.7); text-decoration: none;">Perguntas Frequentes</a></li>
                 </ul>
             </div>
 
             <div style="flex: 1; min-width: 200px;">
-                <h4 style="margin-bottom: 20px; font-size: 16px;">Contato</h4>
-                <p style="font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">
-                    📸 @3vezesadm
-                </p>
-                <p style="font-size: 14px; color: rgba(255,255,255,0.7);">
-                    ✉️ tresvezesadm@gmail.com
-                </p>
+                <h4 style="margin-bottom: 20px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;">Contato</h4>
+                <p style="font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 12px;">📸 @3vezesadm</p>
+                <p style="font-size: 14px; color: rgba(255,255,255,0.7);">✉️ tresvezesadm@gmail.com</p>
             </div>
         </div>
 
-        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; display: flex; flex-wrap: wrap; justify-content: space-between; font-size: 12px; opacity: 0.6;">
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; font-size: 13px; opacity: 0.7;">
             <p>© 2026 3xAdm. Todos os direitos reservados.</p>
             <p>Desenvolvido com 💛 para concurseiros</p>
         </div>
-        <p style="text-align: center; font-size: 10px; opacity: 0.4; margin-top: 20px;">
+        
+        <p style="text-align: center; font-size: 10px; opacity: 0.4; margin-top: 25px;">
             Este site não possui vínculo oficial com bancas examinadoras ou órgãos públicos citados.
         </p>
     </div>
 </footer>
+
 <script>
-  // Navbar scroll effect
-  const navbar = document.getElementById('navbar');
-  window.addEventListener('scroll', () => {
-    navbar.classList.toggle('scrolled', window.scrollY > 20);
-  });
-
-  // Mobile menu toggle
-  const hamburger = document.getElementById('hamburger');
-  const mobileMenu = document.getElementById('mobileMenu');
-  hamburger.addEventListener('click', () => {
-    mobileMenu.classList.toggle('open');
-  });
-  // Close mobile menu on link click
-  mobileMenu.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => mobileMenu.classList.remove('open'));
-  });
-
-  // FAQ accordion
-  document.querySelectorAll('.faq-q').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const item = btn.parentElement;
-      const isOpen = item.classList.contains('open');
-      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
-      if (!isOpen) item.classList.add('open');
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 20) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
     });
-  });
 
-  // Intersection observer for fade-in
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.animationPlayState = 'running';
-        observer.unobserve(entry.target);
-      }
+    // Mobile menu toggle
+    const hamburger = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobileMenu');
+    hamburger.addEventListener('click', () => {
+        mobileMenu.classList.toggle('open');
     });
-  }, { threshold: 0.12 });
-  document.querySelectorAll('.fade-in').forEach(el => {
-    el.style.animationPlayState = 'paused';
-    observer.observe(el);
-  });
 
-  // Smooth close mobile menu on outside click
-  document.addEventListener('click', (e) => {
-    if (!navbar.contains(e.target)) mobileMenu.classList.remove('open');
-  });
+    // Close mobile menu on link click
+    mobileMenu.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', () => {
+            mobileMenu.classList.remove('open');
+        });
+    });
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-q').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = btn.parentElement;
+            const isOpen = item.classList.contains('open');
+            document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+            if (!isOpen) item.classList.add('open');
+        });
+    });
+
+    // Smooth close mobile menu on outside click
+    document.addEventListener('click', (e) => {
+        if (!navbar.contains(e.target)) mobileMenu.classList.remove('open');
+    });
 </script>
- <footer style="background: #0d1b3e; padding: 60px 20px; color: white; text-align: center;">
-    <div style="max-width: 1100px; margin: 0 auto;">
-        <img src="logo.png" alt="3xAdm" style="height: 60px; margin-bottom: 20px; filter: brightness(0) invert(1);">
-        <p style="font-size: 16px; opacity: 0.8; max-width: 600px; margin: 0 auto 30px;">
-            Sua jornada rumo à aprovação em Administração começa aqui. Materiais focados, didáticos e direto ao ponto.
-        </p>
-        
-        <div style="margin-bottom: 30px;">
-            <a href="#beneficios" style="color: white; text-decoration: none; margin: 0 15px; font-size: 14px;">Benefícios</a>
-            <a href="#feedbacks" style="color: white; text-decoration: none; margin: 0 15px; font-size: 14px;">Feedbacks</a>
-            <a href="#catalogo" style="color: white; text-decoration: none; margin: 0 15px; font-size: 14px;">Materiais</a>
-        </div>
-
-        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px; font-size: 12px; opacity: 0.6;">
-            <p>© 2024 3xAdm - Todos os direitos reservados.</p>
-            <p style="margin-top: 10px;">Este site não possui vínculo oficial com bancas examinadoras ou órgãos públicos citados.</p>
-        </div>
-    </div>
-</footer>
+</body>
+</html>
 </body>
 </html>
