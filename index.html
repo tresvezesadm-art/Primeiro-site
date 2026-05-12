@@ -827,7 +827,7 @@
   </div>
 </section>
 
-<footer style="background: #0d1b3e; padding: 60px 20px; color: white; border-top: 1px solid rgba(255,255,255,0.1); font-family: sans-serif;">
+<footer style="background: #0d1b3e; padding: 60px 20px; color: white; border-top: 1px solid rgba(255,255,255,0.1); font-family: sans-serif; margin-top: 50px;">
     <div style="max-width: 1100px; margin: 0 auto;">
         <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 40px; text-align: left; margin-bottom: 40px;">
             
@@ -869,31 +869,23 @@
 </footer>
 
 <script>
-    // Navbar scroll effect
+    // Scripts essenciais para o site funcionar
     const navbar = document.getElementById('navbar');
     window.addEventListener('scroll', () => {
-        if (window.scrollY > 20) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
-        }
+        if (window.scrollY > 20) { navbar.classList.add('scrolled'); }
+        else { navbar.classList.remove('scrolled'); }
     });
 
-    // Mobile menu toggle
     const hamburger = document.getElementById('hamburger');
     const mobileMenu = document.getElementById('mobileMenu');
-    hamburger.addEventListener('click', () => {
-        mobileMenu.classList.toggle('open');
-    });
+    if(hamburger) {
+        hamburger.addEventListener('click', () => { mobileMenu.classList.toggle('open'); });
+    }
 
-    // Close mobile menu on link click
     mobileMenu.querySelectorAll('a').forEach(a => {
-        a.addEventListener('click', () => {
-            mobileMenu.classList.remove('open');
-        });
+        a.addEventListener('click', () => { mobileMenu.classList.remove('open'); });
     });
 
-    // FAQ accordion
     document.querySelectorAll('.faq-q').forEach(btn => {
         btn.addEventListener('click', () => {
             const item = btn.parentElement;
@@ -902,13 +894,6 @@
             if (!isOpen) item.classList.add('open');
         });
     });
-
-    // Smooth close mobile menu on outside click
-    document.addEventListener('click', (e) => {
-        if (!navbar.contains(e.target)) mobileMenu.classList.remove('open');
-    });
 </script>
-</body>
-</html>
 </body>
 </html>
