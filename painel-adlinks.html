@@ -1,0 +1,1111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Estudos — ADLinks | 3xAdm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --navy:#1A2F5A;
+    --navy-dark:#0D1B3E;
+    --navy-deeper:#081226;
+    --gold:#F5C400;
+    --gold-light:#FFD740;
+    --gold-soft:#FFF8D6;
+    --cream:#F8F9FC;
+    --paper:#FFFFFF;
+    --ink:#1B2436;
+    --muted:#6B7494;
+    --border:#EEF0F7;
+    --green:#28a745;
+    --green-bg:#E8F5EC;
+    --red:#C0504D;
+    --red-bg:#FBEAE9;
+    --blue-tag:#1A4FB5;
+    --blue-tag-bg:#EBF3FF;
+    --radius:14px;
+    --shadow: 0 4px 18px rgba(13,27,62,.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Plus Jakarta Sans', Arial, Helvetica, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Outfit', Arial, sans-serif;
+    font-weight:700;
+    color:var(--navy-deeper);
+    letter-spacing:-.01em;
+  }
+  a{color:var(--navy);}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea{font-family:inherit;}
+
+  /* ===== layout ===== */
+  .app{display:flex; min-height:100vh;}
+  .sidebar{
+    width:250px; flex-shrink:0;
+    background: linear-gradient(180deg, var(--navy-deeper), var(--navy-dark) 60%);
+    color:#EFE9DA;
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+    z-index:20;
+  }
+  .brand{
+    padding:26px 22px 18px;
+    border-bottom:1px solid rgba(255,255,255,.12);
+  }
+  .brand .mark{
+    font-family:'Outfit', sans-serif;
+    font-weight:700; font-size:26px; color:#fff; line-height:1;
+  }
+  .brand .mark span{color:var(--gold-light);}
+  .brand .tag{
+    margin-top:6px; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:rgba(239,233,218,.6);
+  }
+  nav.navlist{padding:16px 12px; display:flex; flex-direction:column; gap:3px; flex:1; overflow-y:auto;}
+  .nav-item{
+    display:flex; align-items:center; gap:11px;
+    background:transparent; border:none; text-align:left;
+    color:rgba(239,233,218,.82);
+    padding:11px 13px; border-radius:10px; font-size:14.5px; font-weight:600;
+    transition:background .15s ease, color .15s ease;
+  }
+  .nav-item:hover{background:rgba(255,255,255,.06); color:#fff;}
+  .nav-item.active{background:var(--gold); color:var(--navy-deeper);}
+  .nav-item .ic{width:18px; text-align:center; font-size:15px;}
+  .sidebar-foot{
+    padding:16px 22px 22px; font-size:12px; color:rgba(239,233,218,.55);
+    border-top:1px solid rgba(255,255,255,.1);
+    display:flex; align-items:center; gap:8px;
+  }
+  .sidebar-foot .dot{width:5px;height:5px;border-radius:50%;background:var(--gold);}
+
+  .main{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .topbar{
+    position:sticky; top:0; z-index:10;
+    background:rgba(250,246,237,.9); backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--border);
+    padding:14px 30px; display:flex; align-items:center; justify-content:space-between; gap:18px;
+    flex-wrap:wrap;
+  }
+  .topbar h1{font-size:19px; margin:0;}
+  .stat-chips{display:flex; gap:10px; flex-wrap:wrap;}
+  .chip{
+    background:var(--paper); border:1px solid var(--border); border-radius:999px;
+    padding:7px 14px; font-size:12.5px; font-weight:600; color:var(--navy-deeper);
+    display:flex; align-items:center; gap:7px; box-shadow:var(--shadow);
+  }
+  .chip b{color:var(--gold); font-size:14px;}
+  .chip.warn{color:var(--red);}
+  .menu-toggle{display:none; background:var(--navy); color:#fff; border:none; border-radius:8px; padding:8px 11px; font-size:16px;}
+
+  .content{padding:26px 30px 60px; max-width:1180px; width:100%; margin:0 auto;}
+  .view{display:none;}
+  .view.active{display:block; animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  /* ===== reusable bits ===== */
+  .card{
+    background:var(--paper); border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:22px;
+  }
+  .grid{display:grid; gap:18px;}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:980px){.grid.cols-4{grid-template-columns:repeat(2,1fr);} .grid.cols-3{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:640px){.grid.cols-4,.grid.cols-3,.grid.cols-2{grid-template-columns:1fr;}}
+
+  .kpi{position:relative; overflow:hidden;}
+  .kpi::before{content:"";position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--gold);}
+  .kpi .label{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700;}
+  .kpi .value{font-family:'Outfit',sans-serif; font-size:32px; font-weight:700; color:var(--navy-deeper); margin-top:6px;}
+  .kpi .sub{font-size:12.5px; color:var(--muted); margin-top:4px;}
+
+  .section-title{display:flex; align-items:baseline; justify-content:space-between; margin:34px 0 14px;}
+  .section-title h2{font-size:20px; margin:0;}
+  .section-title .hint{font-size:12.5px; color:var(--muted);}
+  .section-title:first-child{margin-top:0;}
+
+  .progress-track{background:var(--gold-soft); border-radius:999px; height:9px; overflow:hidden;}
+  .progress-fill{height:100%; background:linear-gradient(90deg,var(--gold),var(--navy)); border-radius:999px; transition:width .4s ease;}
+
+  .bar-row{display:grid; grid-template-columns:170px 1fr 52px; align-items:center; gap:12px; padding:8px 0;}
+  .bar-row .name{font-size:13px; font-weight:600; color:var(--navy-deeper);}
+  .bar-row .pct{font-size:12.5px; font-weight:700; color:var(--muted); text-align:right;}
+
+  .trail{display:flex; align-items:center; overflow-x:auto; padding:22px 6px 10px; gap:0;}
+  .trail .wk{flex:0 0 auto; display:flex; flex-direction:column; align-items:center; width:52px; position:relative;}
+  .trail .wk .node{
+    width:30px; height:30px; border-radius:50%; border:2px solid var(--border); background:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:var(--muted); z-index:2;
+  }
+  .trail .wk.done .node{background:var(--navy); border-color:var(--navy); color:#fff;}
+  .trail .wk.current .node{background:var(--gold); border-color:var(--gold); color:#fff; box-shadow:0 0 0 4px var(--gold-soft);}
+  .trail .wk .line{position:absolute; top:14px; left:-50%; width:100%; height:3px; background:var(--border); z-index:1;}
+  .trail .wk.done .line{background:var(--navy);}
+  .trail .wk:first-child .line{display:none;}
+  .trail .wk .lbl{margin-top:6px; font-size:9.5px; color:var(--muted);}
+
+  table{width:100%; border-collapse:collapse;}
+  th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted);
+    padding:9px 10px; border-bottom:2px solid var(--border);
+  }
+  td{padding:9px 10px; border-bottom:1px solid var(--border); font-size:13.5px; vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .link-btn{
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+    background:var(--gold-soft); color:var(--navy-deeper); border:1px solid var(--gold-light);
+    padding:5px 11px; border-radius:8px; font-size:12px; font-weight:700; text-decoration:none;
+  }
+  .link-btn:hover{background:var(--gold); color:#fff; border-color:var(--gold);}
+  .link-btn.disabled{opacity:.35; pointer-events:none; background:transparent; border-style:dashed;}
+  .num-input{width:58px; padding:5px 7px; border:1px solid var(--border); border-radius:7px; font-size:13px; text-align:center;}
+  .num-input:focus{outline:2px solid var(--gold); border-color:var(--gold);}
+  .txt-input{width:100%; padding:6px 9px; border:1px solid var(--border); border-radius:7px; font-size:13px;}
+  .txt-input:focus{outline:2px solid var(--gold); border-color:var(--gold);}
+
+  .badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11.5px; font-weight:700;}
+  .badge.good{background:var(--green-bg); color:var(--green);}
+  .badge.bad{background:var(--red-bg); color:var(--red);}
+  .badge.neutral{background:var(--blue-tag-bg); color:var(--blue-tag);}
+
+  .accordion{border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; background:#fff;}
+  .accordion .acc-head{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    padding:15px 18px; cursor:pointer; background:#fff; border:none; width:100%; text-align:left;
+  }
+  .accordion .acc-head:hover{background:var(--gold-soft);}
+  .accordion .acc-head .htxt{display:flex; align-items:center; gap:12px; flex:1; min-width:0;}
+  .accordion .acc-head h3{margin:0; font-size:15px; color:var(--navy-deeper);}
+  .accordion .acc-head .mini-bar{width:110px; flex-shrink:0;}
+  .accordion .acc-head .chev{transition:transform .2s ease; color:var(--muted); flex-shrink:0;}
+  .accordion.open .acc-head .chev{transform:rotate(90deg);}
+  .accordion .acc-body{display:none; padding:0 18px 18px;}
+  .accordion.open .acc-body{display:block;}
+  .acc-count{font-size:12px; color:var(--muted); font-weight:600; flex-shrink:0;}
+
+  .day-card{border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:10px; background:#fff;}
+  .day-card.done{background:var(--green-bg); border-color:#bfe2cb;}
+  .day-card .dhead{display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;}
+  .day-card .dhead .dname{font-weight:700; color:var(--navy-deeper); font-size:14px;}
+  .day-card .day-count{margin-left:auto; font-size:11.5px; font-weight:700; color:var(--muted);}
+  .items{display:flex; flex-direction:column; gap:2px;}
+  .item-row{display:flex; align-items:center; gap:10px; padding:6px 4px; border-radius:8px; cursor:pointer;}
+  .item-row:hover{background:var(--cream);}
+  .item-row input{width:17px; height:17px; accent-color:var(--navy); flex-shrink:0;}
+  .item-row.done .item-name{color:var(--muted); text-decoration:line-through;}
+  .item-name{font-size:13.5px; color:var(--ink);}
+  .item-name.is-sim{color:var(--navy); font-weight:700;}
+  .item-name.is-rev{color:#6A4A9C; font-weight:700;}
+  .week-heading{
+    display:flex; align-items:center; gap:12px; margin:26px 0 10px; position:sticky; top:64px; background:var(--cream); padding:6px 0; z-index:3;
+  }
+  .week-heading h3{margin:0; font-size:15px; color:var(--navy-deeper);}
+  .week-heading .wline{flex:1; height:1px; background:var(--border);}
+  .week-heading .wpct{font-size:12px; color:var(--muted); font-weight:700;}
+
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px;}
+  .search-input{flex:1; min-width:200px; padding:10px 14px; border:1px solid var(--border); border-radius:10px; font-size:13.5px; background:#fff;}
+  .search-input:focus{outline:2px solid var(--gold); border-color:var(--gold);}
+  .btn{
+    background:var(--navy); color:#fff; border:none; padding:10px 16px; border-radius:10px; font-size:13.5px; font-weight:700;
+  }
+  .btn:hover{background:var(--navy-deeper);}
+  .btn.ghost{background:#fff; color:var(--navy); border:1px solid var(--border);}
+  .btn.gold{background:var(--gold); color:#fff;}
+  .btn.danger{background:#fff; color:var(--red); border:1px solid #e3bcbb;}
+
+  .scale{display:flex; gap:5px;}
+  .scale button{
+    width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:#fff;
+    font-size:12.5px; font-weight:700; color:var(--muted);
+  }
+  .scale button.active{background:var(--navy); border-color:var(--navy); color:#fff;}
+  .prior-row{display:grid; grid-template-columns:1fr auto auto; gap:18px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border);}
+  .prior-row:last-child{border-bottom:none;}
+  .prior-row .pname{font-size:13.5px; font-weight:600; color:var(--navy-deeper);}
+  .prior-row .plabel{font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:4px; text-align:center;}
+  @media(max-width:760px){.prior-row{grid-template-columns:1fr; gap:8px;} .prior-row .pcol{display:flex; align-items:center; justify-content:space-between;}}
+  .empty{text-align:center; padding:40px 20px; color:var(--muted);}
+  .hidden{display:none !important;}
+  .empty .big{font-size:34px; margin-bottom:8px;}
+
+  .config-row{display:flex; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid var(--border); gap:20px; flex-wrap:wrap;}
+  .config-row:last-child{border-bottom:none;}
+  .config-row .cinfo strong{display:block; font-size:14px; color:var(--navy-deeper); margin-bottom:3px;}
+  .config-row .cinfo span{font-size:12.5px; color:var(--muted);}
+  .date-input{padding:9px 12px; border:1px solid var(--border); border-radius:9px; font-size:13.5px;}
+
+  .hero{
+    background: linear-gradient(135deg, var(--navy-deeper), var(--navy) 65%, var(--navy) 100%);
+    border-radius:20px; padding:34px 34px 28px; color:#fff; position:relative; overflow:hidden;
+    display:grid; grid-template-columns:1.1fr 1fr; gap:26px; align-items:center;
+  }
+  .hero::after{
+    content:""; position:absolute; right:-60px; bottom:-70px; width:220px; height:220px; border-radius:50%;
+    background:radial-gradient(circle, rgba(200,146,42,.35), transparent 70%);
+  }
+  .hero .eyebrow{font-size:11.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--gold-light); font-weight:700;}
+  .hero h1{color:#fff; font-size:26px; margin:8px 0 6px;}
+  .hero p{color:rgba(255,255,255,.75); font-size:13.5px; max-width:420px; margin:0;}
+  .countdown{position:relative; z-index:2; display:flex; gap:14px; justify-content:flex-end; flex-wrap:wrap;}
+  .cbox{background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:16px 20px; text-align:center; min-width:84px;}
+  .cbox .n{font-family:'Outfit',sans-serif; font-size:28px; font-weight:700; color:var(--gold-light);}
+  .cbox .l{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.7); margin-top:3px;}
+  @media(max-width:820px){.hero{grid-template-columns:1fr;} .countdown{justify-content:flex-start;}}
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#d8cfb2; border-radius:99px;}
+
+  @media(max-width:900px){
+    .sidebar{position:fixed; left:-260px; transition:left .2s ease; box-shadow:0 0 40px rgba(0,0,0,.3);}
+    .sidebar.open{left:0;}
+    .menu-toggle{display:inline-block;}
+    .content{padding:20px 16px 50px;}
+    .topbar{padding:12px 16px;}
+  }
+  @media(prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+  :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+</style>
+</head>
+<body>
+<div id="loadingScreen" style="min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:var(--cream); font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="width:34px; height:34px; border:3px solid var(--border); border-top-color:var(--navy-dark); border-radius:50%; animation:spin .8s linear infinite;"></div>
+  <div style="color:var(--muted); font-size:13.5px;" id="loadingText">Carregando seu painel...</div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+
+<div id="noAccessScreen" class="hidden" style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--cream); font-family:'Plus Jakarta Sans',sans-serif; padding:20px;">
+  <div style="max-width:380px; text-align:center; background:#fff; border:1px solid var(--border); border-radius:16px; padding:30px; box-shadow:var(--shadow);">
+    <div style="font-size:32px; margin-bottom:10px;">🔒</div>
+    <h2 style="margin:0 0 8px;">Ainda sem acesso liberado</h2>
+    <p style="color:var(--muted); font-size:13.5px; margin:0 0 18px;">Sua conta está logada, mas nenhum curso foi liberado pra ela ainda. Fale com a equipe do ADLinks pra liberar seu acesso.</p>
+    <button class="btn ghost" onclick="sair()">Sair</button>
+  </div>
+</div>
+
+<div class="app hidden" id="appRoot">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark">AD<span>Links</span></div>
+      <div class="tag">Painel de estudos · 3xAdm</div>
+    </div>
+    <nav class="navlist" id="navlist">
+      <button class="nav-item active" data-view="dashboard"><span class="ic">◆</span> Painel</button>
+      <button class="nav-item" data-view="cronograma"><span class="ic">▤</span> Cronograma</button>
+      <button class="nav-item" data-view="disciplinas"><span class="ic">▥</span> Disciplinas</button>
+      <button class="nav-item" data-view="simulados"><span class="ic">✎</span> Simulados</button>
+      <button class="nav-item" data-view="revisoes"><span class="ic">↺</span> Revisões</button>
+      <button class="nav-item" data-view="config"><span class="ic">⚙</span> Configurações</button>
+    </nav>
+    <div class="sidebar-foot" style="justify-content:space-between;">
+      <span id="alunoNome" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@3vezesadm</span>
+      <button onclick="sair()" style="background:transparent; border:none; color:rgba(239,233,218,.6); font-size:11.5px; font-weight:700; cursor:pointer; text-decoration:underline; flex-shrink:0;">Sair</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <h1 id="pageTitle">Painel</h1>
+      </div>
+      <div class="stat-chips" id="headerChips"></div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section class="view active" id="view-dashboard">
+        <div class="hero">
+          <div>
+            <div class="eyebrow">Reta final de estudos</div>
+            <h1 id="heroTitle">Configure a data da sua prova</h1>
+            <p id="heroSub">Defina a data do concurso em Configurações para acompanhar a contagem regressiva e organizar sua reta final.</p>
+          </div>
+          <div class="countdown" id="countdownBox"></div>
+        </div>
+
+        <div class="grid cols-4" style="margin-top:22px;" id="kpiGrid"></div>
+
+        <div class="section-title"><h2>Trilha do cronograma</h2><span class="hint" id="trailHint"></span></div>
+        <div class="card"><div class="trail" id="trail"></div></div>
+
+        <div class="grid cols-2" style="margin-top:26px; align-items:start;">
+          <div class="card">
+            <div class="section-title" style="margin-top:0;"><h2 style="font-size:16px;">Desempenho por disciplina</h2></div>
+            <div id="perfBars"></div>
+          </div>
+          <div class="card">
+            <div class="section-title" style="margin-top:0;"><h2 style="font-size:16px;">Simulados por disciplina</h2></div>
+            <div id="simBars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CRONOGRAMA -->
+      <section class="view" id="view-cronograma">
+        <div class="accordion" id="personalizeAccordion">
+          <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+            <div class="htxt"><h3>Personalizar meu cronograma</h3></div>
+            <span class="acc-count">responda e gere seu plano sob medida</span>
+            <span class="chev">›</span>
+          </button>
+          <div class="acc-body">
+            <p style="font-size:12.5px; color:var(--muted); margin:0 0 14px;">
+              Pra cada disciplina, avalie de 1 a 5: o peso dela na prova e o quanto você já domina o conteúdo.
+              Disciplinas com peso alto e domínio baixo aparecem com mais frequência no seu cronograma.
+            </p>
+            <div id="prioridadesForm"></div>
+            <div style="display:flex; gap:10px; align-items:center; margin-top:16px; flex-wrap:wrap;">
+              <button class="btn gold" onclick="gerarCronogramaPersonalizado()">Gerar cronograma personalizado</button>
+              <button class="btn ghost" onclick="restaurarCronogramaPadrao()">Restaurar cronograma padrão</button>
+              <span id="personalizeStatus" style="font-size:12px; color:var(--muted);"></span>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar">
+          <input class="search-input" id="cronoSearch" placeholder="Buscar disciplina ou dia (ex.: D12, Direito Administrativo)...">
+          <button class="btn ghost" id="cronoOnlyPending">Só pendentes</button>
+        </div>
+        <div id="cronoList"></div>
+      </section>
+
+      <!-- DISCIPLINAS -->
+      <section class="view" id="view-disciplinas">
+        <div class="toolbar">
+          <input class="search-input" id="discSearch" placeholder="Buscar tópico, sigla ou disciplina...">
+          <button class="btn ghost" id="discExpandAll">Expandir tudo</button>
+        </div>
+        <div id="discList"></div>
+      </section>
+
+      <!-- SIMULADOS -->
+      <section class="view" id="view-simulados">
+        <div class="toolbar">
+          <input class="search-input" id="simSearch" placeholder="Buscar simulado ou disciplina...">
+        </div>
+        <div id="simList"></div>
+      </section>
+
+      <!-- REVISÕES -->
+      <section class="view" id="view-revisoes">
+        <div class="toolbar">
+          <input class="search-input" id="revSearch" placeholder="Buscar tópico para revisão...">
+        </div>
+        <div id="revList"></div>
+      </section>
+
+      <!-- CONFIG -->
+      <section class="view" id="view-config">
+        <div class="card">
+          <div class="config-row">
+            <div class="cinfo"><strong>Data de início dos estudos</strong><span>Usada para calcular seus dias de estudo.</span></div>
+            <input type="date" class="date-input" id="cfgStart">
+          </div>
+          <div class="config-row">
+            <div class="cinfo"><strong>Data da prova</strong><span>Alimenta a contagem regressiva do painel.</span></div>
+            <input type="date" class="date-input" id="cfgExam">
+          </div>
+          <div class="config-row">
+            <div class="cinfo"><strong>Baixar uma cópia</strong><span>Baixe um arquivo .json com seu progresso atual, só como referência.</span></div>
+            <button class="btn ghost" id="btnExport">Baixar cópia</button>
+          </div>
+          <div class="config-row">
+            <div class="cinfo"><strong>Zerar progresso</strong><span>Apaga marcações, acertos e revisões deste curso. Não pode ser desfeito.</span></div>
+            <button class="btn danger" id="btnReset">Zerar tudo</button>
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--muted); margin-top:16px;">Seu progresso é salvo automaticamente na nuvem, vinculado à sua conta. Você pode acessar de qualquer aparelho fazendo login.</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://nlesxvkiekjmfvyqoets.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ZupvmSDV4CoHM2OraLRhqA_8eM-HgRN';
+const LOGIN_PAGE = 'login.html';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let DATA = {disciplinas:[], cronograma:[], simulados:[]};
+let CURRENT_USER = null;
+let CURRENT_CURSO = null;
+let state = {topics:{}, dayItems:{}, revisoes:{}, exams:{}, config:{examDate:'', startDate:''}, prioridades:{}, customCronograma:null};
+
+function sair(){
+  sb.auth.signOut().then(()=>{ window.location.href = LOGIN_PAGE; });
+}
+function getCronograma(){
+  return state.customCronograma || DATA.cronograma;
+}
+function prioridadeState(subjIdx){
+  if(!state.prioridades[subjIdx]) state.prioridades[subjIdx] = {peso:3, conhecimento:3};
+  return state.prioridades[subjIdx];
+}
+function priorityScore(subjIdx){
+  const p = prioridadeState(subjIdx);
+  return Math.max(0.5, p.peso*2 - p.conhecimento*1.5 + 4);
+}
+function weightedRoundRobinSequence(items, count){
+  // items: [{key, weight}] — sequência ponderada e intercalada (smooth weighted round robin)
+  const cw = {}; items.forEach(it=> cw[it.key]=0);
+  const totalWeight = items.reduce((s,it)=>s+it.weight,0) || 1;
+  const seq = [];
+  for(let i=0;i<count;i++){
+    let best = items[0];
+    items.forEach(it=>{ cw[it.key]+=it.weight; if(cw[it.key] > cw[best.key]) best = it; });
+    seq.push(best.key);
+    cw[best.key]-=totalWeight;
+  }
+  return seq;
+}
+function buildPersonalizedCronograma(){
+  const items = DATA.disciplinas.map((s,i)=>{
+    const parts = s.header.split(' - ');
+    return {key:i, code:(parts[0]||s.header).trim(), name:(parts[1]||s.header).trim(), weight: priorityScore(i)};
+  });
+  const itemsByKey = {}; items.forEach(it=> itemsByKey[it.key]=it);
+  let regularSlots = 0;
+  DATA.cronograma.forEach(d=> d.items.forEach(it=>{ if(it.code!=='SIM' && it.code!=='REV') regularSlots++; }));
+  const seq = weightedRoundRobinSequence(items, regularSlots);
+  let p = 0;
+  return DATA.cronograma.map(d=>({
+    day: d.day, week: d.week, revisao_de: d.revisao_de,
+    items: d.items.map(it=>{
+      if(it.code==='SIM' || it.code==='REV') return {...it};
+      const chosen = itemsByKey[seq[p++]];
+      return {code: chosen.code, disc: chosen.name, id: it.id};
+    })
+  }));
+}
+async function salvarConfigExtra(){
+  if(!CURRENT_USER || !CURRENT_CURSO) return;
+  const extra = { prioridades: state.prioridades, personalizado: !!state.customCronograma };
+  await sb.from('config_aluno').upsert({
+    aluno_id: CURRENT_USER.id, curso_id: CURRENT_CURSO.id, extra
+  }, { onConflict: 'aluno_id,curso_id' });
+}
+function gerarCronogramaPersonalizado(){
+  if(state.customCronograma){
+    if(!confirm('Isso vai reorganizar as disciplinas do seu cronograma com base nas respostas. Os dias já marcados continuam marcados na mesma posição, mas a disciplina daquele dia pode mudar. Continuar?')) return;
+  }
+  state.customCronograma = buildPersonalizedCronograma();
+  salvarConfigExtra();
+  renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly);
+  renderHeader();
+  document.getElementById('personalizeStatus').textContent = 'Cronograma personalizado gerado com base nas suas respostas.';
+}
+function restaurarCronogramaPadrao(){
+  if(!confirm('Isso volta o cronograma para a ordem original da planilha. Continuar?')) return;
+  state.customCronograma = null;
+  salvarConfigExtra();
+  renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly);
+  renderHeader();
+  document.getElementById('personalizeStatus').textContent = 'Cronograma restaurado para o padrão.';
+}
+function updatePrioridade(subjIdx, field, val){
+  const p = prioridadeState(subjIdx);
+  p[field] = Math.max(1, Math.min(5, Number(val)||3));
+  salvarConfigExtra();
+}
+
+function topicState(key){
+  if(!state.topics[key]) state.topics[key] = {acertos:0, feitas:0};
+  return state.topics[key];
+}
+function revState(key){
+  if(!state.revisoes[key]) state.revisoes[key] = {r1:0,r2:0,r3:0,obs:''};
+  return state.revisoes[key];
+}
+function examState(key){
+  if(!state.exams[key]) state.exams[key] = {acertos:0, erros:0};
+  return state.exams[key];
+}
+function pct(a,b){ return b>0 ? Math.round((a/b)*1000)/10 : 0; }
+
+/* ===== aggregate computations ===== */
+function subjectTopicStats(subjIdx){
+  const s = DATA.disciplinas[subjIdx];
+  let acertos=0, feitas=0;
+  s.topics.forEach((t,i)=>{
+    const st = state.topics[subjIdx+'-'+i];
+    if(st){ acertos+=Number(st.acertos)||0; feitas+=Number(st.feitas)||0; }
+  });
+  return {acertos, feitas, pct:pct(acertos,feitas)};
+}
+function overallTopicStats(){
+  let acertos=0, feitas=0;
+  DATA.disciplinas.forEach((s,si)=> s.topics.forEach((t,ti)=>{
+    const st = state.topics[si+'-'+ti];
+    if(st){ acertos+=Number(st.acertos)||0; feitas+=Number(st.feitas)||0; }
+  }));
+  return {acertos, feitas, pct:pct(acertos,feitas)};
+}
+function cronogramaStats(){
+  let total=0, done=0;
+  getCronograma().forEach(d=> d.items.forEach((it,idx)=>{
+    total++;
+    if(state.dayItems[d.day+'#'+idx]) done++;
+  }));
+  return {total, done, pct: pct(done,total)};
+}
+function daysFullyDoneCount(){
+  let n=0;
+  getCronograma().forEach(d=>{
+    if(d.items.length===0) return;
+    const done = d.items.every((it,idx)=> state.dayItems[d.day+'#'+idx]);
+    if(done) n++;
+  });
+  return n;
+}
+function subjectExamStats(subjIdx){
+  const s = DATA.simulados[subjIdx];
+  let acertos=0, erros=0;
+  s.exams.forEach((e,i)=>{
+    const st = state.exams[subjIdx+'-'+i];
+    if(st){ acertos += Number(st.acertos)||0; erros += Number(st.erros)||0; }
+  });
+  return {acertos, erros, feitas: acertos+erros, pct: pct(acertos, acertos+erros)};
+}
+
+/* ===== header + dashboard ===== */
+function daysBetween(a,b){ return Math.ceil((b-a)/(1000*60*60*24)); }
+
+function renderHeader(){
+  const chips = document.getElementById('headerChips');
+  const ov = overallTopicStats();
+  const cr = cronogramaStats();
+  let countdownTxt = '';
+  if(state.config.examDate){
+    const diff = daysBetween(new Date(new Date().toDateString()), new Date(state.config.examDate));
+    countdownTxt = diff>=0 ? `<span class="chip"><b>${diff}</b> dias p/ prova</span>` : `<span class="chip warn">Prova já passou</span>`;
+  }
+  chips.innerHTML = `
+    ${countdownTxt}
+    <span class="chip"><b>${cr.pct}%</b> cronograma</span>
+    <span class="chip"><b>${ov.pct}%</b> desempenho geral</span>
+  `;
+}
+
+function renderDashboard(){
+  const ov = overallTopicStats();
+  const cr = cronogramaStats();
+  const daysDone = daysFullyDoneCount();
+
+  // hero
+  const heroTitle = document.getElementById('heroTitle');
+  const heroSub = document.getElementById('heroSub');
+  const cbox = document.getElementById('countdownBox');
+  if(state.config.examDate){
+    const diff = daysBetween(new Date(new Date().toDateString()), new Date(state.config.examDate));
+    heroTitle.textContent = diff>=0 ? `Faltam ${diff} dias para a sua prova` : 'A data da prova já passou';
+    heroSub.textContent = diff>=0 ? 'Continue firme: cada disciplina revisada hoje é ponto garantido no dia da prova.' : 'Atualize a data da prova em Configurações se estiver se preparando para um novo concurso.';
+    let daysStudying = state.config.startDate ? Math.max(0, daysBetween(new Date(state.config.startDate), new Date(new Date().toDateString()))) : null;
+    cbox.innerHTML = `
+      <div class="cbox"><div class="n">${diff>=0?diff:0}</div><div class="l">dias p/ prova</div></div>
+      <div class="cbox"><div class="n">${daysDone}</div><div class="l">dias completos</div></div>
+      ${daysStudying!==null ? `<div class="cbox"><div class="n">${daysStudying}</div><div class="l">dias de jornada</div></div>` : ''}
+    `;
+  } else {
+    heroTitle.textContent = 'Configure a data da sua prova';
+    heroSub.textContent = 'Defina a data do concurso em Configurações para acompanhar a contagem regressiva e organizar sua reta final.';
+    cbox.innerHTML = `<div class="cbox"><div class="n">${daysDone}</div><div class="l">dias completos</div></div>`;
+  }
+
+  // KPIs
+  const totalTopics = DATA.disciplinas.reduce((n,s)=>n+s.topics.length,0);
+  const simAll = DATA.simulados.reduce((acc,si)=>{
+    const idx = DATA.simulados.indexOf(si);
+    si.exams.forEach((e,i)=>{ const st=state.exams[idx+'-'+i]; if(st){ acc.acertos+=Number(st.acertos)||0; acc.erros+=Number(st.erros)||0; } });
+    return acc;
+  }, {acertos:0,erros:0});
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="card kpi">
+      <div class="label">Desempenho geral</div>
+      <div class="value">${ov.pct}%</div>
+      <div class="sub">${ov.acertos} acertos em ${ov.feitas} questões feitas</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Cronograma cumprido</div>
+      <div class="value">${cr.pct}%</div>
+      <div class="sub">${cr.done} de ${cr.total} itens marcados · ${daysDone} dias completos</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Tópicos no plano</div>
+      <div class="value">${totalTopics}</div>
+      <div class="sub">distribuídos em ${DATA.disciplinas.length} disciplinas</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Simulados</div>
+      <div class="value">${pct(simAll.acertos, simAll.acertos+simAll.erros)}%</div>
+      <div class="sub">${simAll.acertos} acertos em ${simAll.acertos+simAll.erros} questões de simulado</div>
+    </div>
+  `;
+
+  // trail (weeks) — progresso por itens marcados dentro de cada semana
+  const weeks = {};
+  getCronograma().forEach(d=>{ (weeks[d.week] = weeks[d.week]||[]).push(d); });
+  const weekNums = Object.keys(weeks).map(Number).sort((a,b)=>a-b);
+  const trail = document.getElementById('trail');
+  let currentSet = false;
+  trail.innerHTML = weekNums.map(w=>{
+    const days = weeks[w];
+    let itemsTotal=0, itemsDone=0;
+    days.forEach(d=> d.items.forEach((it,idx)=>{ itemsTotal++; if(state.dayItems[d.day+'#'+idx]) itemsDone++; }));
+    const isDone = itemsTotal>0 && itemsDone===itemsTotal;
+    let cls='wk';
+    if(isDone) cls+=' done';
+    else if(!currentSet && itemsDone < itemsTotal){ cls+=' current'; currentSet = itemsDone>0?true:currentSet; }
+    return `<div class="${cls}"><div class="line"></div><div class="node">${w}</div><div class="lbl">S${w}</div></div>`;
+  }).join('');
+  document.getElementById('trailHint').textContent = `${weekNums.length} semanas de plano`;
+
+  // performance bars
+  document.getElementById('perfBars').innerHTML = DATA.disciplinas.map((s,i)=>{
+    const st = subjectTopicStats(i);
+    return `<div class="bar-row">
+      <div class="name">${escapeHtml(s.header.split(' - ')[1]||s.header)}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${st.pct}%"></div></div>
+      <div class="pct">${st.pct}%</div>
+    </div>`;
+  }).join('');
+
+  // simulados bars
+  document.getElementById('simBars').innerHTML = DATA.simulados.map((s,i)=>{
+    const st = subjectExamStats(i);
+    return `<div class="bar-row">
+      <div class="name">${escapeHtml(s.header.split(' - ')[1]||s.header)}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${st.pct}%"></div></div>
+      <div class="pct">${st.pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ===== CRONOGRAMA ===== */
+function scaleButtons(subjIdx, field, current){
+  let html = '<div class="scale">';
+  for(let v=1; v<=5; v++){
+    html += `<button type="button" class="${v===current?'active':''}" onclick="setPrioridade(${subjIdx},'${field}',${v},this)">${v}</button>`;
+  }
+  html += '</div>';
+  return html;
+}
+function renderPrioridadesForm(){
+  const html = DATA.disciplinas.map((s,si)=>{
+    const p = prioridadeState(si);
+    const name = (s.header.split(' - ')[1]||s.header);
+    return `<div class="prior-row">
+      <div class="pname">${escapeHtml(name)}</div>
+      <div class="pcol"><div class="plabel">Peso na prova</div>${scaleButtons(si,'peso',p.peso)}</div>
+      <div class="pcol"><div class="plabel">Seu conhecimento</div>${scaleButtons(si,'conhecimento',p.conhecimento)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('prioridadesForm').innerHTML = html;
+}
+function setPrioridade(subjIdx, field, val, btnEl){
+  updatePrioridade(subjIdx, field, val);
+  const wrap = btnEl.parentElement;
+  wrap.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  btnEl.classList.add('active');
+}
+
+function renderCronograma(filter, onlyPending){
+  filter = (filter||'').toLowerCase();
+  const weeks = {};
+  getCronograma().forEach((d,idx)=>{ (weeks[d.week]=weeks[d.week]||[]).push({...d, idx}); });
+  const weekNums = Object.keys(weeks).map(Number).sort((a,b)=>a-b);
+
+  let html = '';
+  weekNums.forEach(w=>{
+    const days = weeks[w].filter(d=>{
+      const itemsCount = d.items.length;
+      const doneCount = d.items.reduce((n,it,idx)=> n + (state.dayItems[d.day+'#'+idx]?1:0), 0);
+      const isFullyDone = itemsCount>0 && doneCount===itemsCount;
+      if(onlyPending && isFullyDone) return false;
+      if(!filter) return true;
+      const hay = (d.day+' '+d.items.map(it=>it.disc+' '+(it.code||'')).join(' ')).toLowerCase();
+      return hay.includes(filter);
+    });
+    if(days.length===0) return;
+    let weekTotal=0, weekDone=0;
+    weeks[w].forEach(d=> d.items.forEach((it,idx)=>{ weekTotal++; if(state.dayItems[d.day+'#'+idx]) weekDone++; }));
+    html += `<div class="week-heading"><h3>Semana ${w}</h3><div class="wline"></div><div class="wpct">${weekDone}/${weekTotal} itens</div></div>`;
+    days.forEach(d=>{
+      const itemsCount = d.items.length;
+      const doneCount = d.items.reduce((n,it,idx)=> n + (state.dayItems[d.day+'#'+idx]?1:0), 0);
+      const isFullyDone = itemsCount>0 && doneCount===itemsCount;
+      const rows = d.items.map((it,idx)=>{
+        const key = d.day+'#'+idx;
+        const checked = !!state.dayItems[key];
+        let nameCls = 'item-name';
+        if(it.code==='SIM') nameCls+=' is-sim';
+        if(it.code==='REV') nameCls+=' is-rev';
+        return `<label class="item-row ${checked?'done':''}">
+          <input type="checkbox" ${checked?'checked':''} onchange="toggleDayItem('${d.day}',${idx})">
+          <span class="${nameCls}">${escapeHtml(it.disc||'')}</span>
+        </label>`;
+      }).join('');
+      html += `<div class="day-card ${isFullyDone?'done':''}">
+        <div class="dhead">
+          <span class="dname">${d.day}</span>
+          ${d.revisao_de?`<span class="badge neutral">revisão de ${escapeHtml(d.revisao_de)}</span>`:''}
+          <span class="day-count">${itemsCount? doneCount+'/'+itemsCount : 'livre'}</span>
+        </div>
+        <div class="items">${rows || '<div class="item-row" style="cursor:default;"><span class="item-name" style="color:var(--muted);">Dia livre, sem itens no plano.</span></div>'}</div>
+      </div>`;
+    });
+  });
+  document.getElementById('cronoList').innerHTML = html || `<div class="empty"><div class="big">🔍</div>Nenhum dia encontrado.</div>`;
+}
+function findCronogramaItem(day, idx){
+  const d = getCronograma().find(x=>x.day===day);
+  return d ? d.items[idx] : null;
+}
+function toggleDayItem(day, idx){
+  const key = day+'#'+idx;
+  state.dayItems[key] = !state.dayItems[key];
+  renderHeader();
+  renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly);
+  const item = findCronogramaItem(day, idx);
+  if(item && item.id && CURRENT_USER){
+    sb.from('progresso_itens').upsert({
+      aluno_id: CURRENT_USER.id, item_id: item.id, concluido: state.dayItems[key]
+    }, { onConflict: 'aluno_id,item_id' }).then(({error})=>{ if(error) console.error('erro ao salvar item', error); });
+  }
+}
+let cronoPendingOnly = false;
+
+/* ===== DISCIPLINAS ===== */
+function renderDisciplinas(filter, forceOpenAll){
+  filter = (filter||'').toLowerCase();
+  const html = DATA.disciplinas.map((s,si)=>{
+    const topics = s.topics.map((t,ti)=>({...t, ti})).filter(t=>{
+      if(!filter) return true;
+      return (t.code+' '+t.text).toLowerCase().includes(filter);
+    });
+    if(topics.length===0) return '';
+    const stat = subjectTopicStats(si);
+    const rows = topics.map(t=>{
+      const key = si+'-'+t.ti;
+      const st = topicState(key);
+      const p = pct(st.acertos, st.feitas);
+      const badgeCls = st.feitas===0 ? 'neutral' : (p>=70?'good':'bad');
+      return `<tr>
+        <td>${escapeHtml(t.text)}</td>
+        <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.acertos}" onchange="updateTopic('${key}',${si},'acertos',this.value)"></td>
+        <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.feitas}" onchange="updateTopic('${key}',${si},'feitas',this.value)"></td>
+        <td style="width:70px;"><span class="badge ${badgeCls}" id="pct-${key}">${p}%</span></td>
+        <td style="width:110px;">${t.link?`<a class="link-btn" href="${t.link}" target="_blank" rel="noopener">Questões ↗</a>`:`<span class="link-btn disabled">Sem link</span>`}</td>
+      </tr>`;
+    }).join('');
+    const openCls = forceOpenAll ? 'open' : '';
+    return `<div class="accordion ${openCls}" data-subj="${si}">
+      <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+        <div class="htxt">
+          <h3>${escapeHtml(s.header.split(' - ')[1]||s.header)}</h3>
+        </div>
+        <div class="mini-bar"><div class="progress-track"><div class="progress-fill" id="subj-bar-${si}" style="width:${stat.pct}%"></div></div></div>
+        <span class="acc-count" id="subj-pct-${si}">${stat.pct}% · ${topics.length} tópicos</span>
+        <span class="chev">›</span>
+      </button>
+      <div class="acc-body">
+        <table><thead><tr><th>Tópico</th><th>Acertos</th><th>Feitas</th><th>%</th><th>Link</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('discList').innerHTML = html || `<div class="empty"><div class="big">🔍</div>Nenhum tópico encontrado.</div>`;
+}
+function updateTopic(key, subjIdx, field, val){
+  const st = topicState(key);
+  st[field] = Math.max(0, Number(val)||0);
+  const p = pct(st.acertos, st.feitas);
+  const badgeEl = document.getElementById('pct-'+key);
+  if(badgeEl){
+    badgeEl.textContent = p+'%';
+    badgeEl.className = 'badge ' + (st.feitas===0?'neutral':(p>=70?'good':'bad'));
+  }
+  const stat = subjectTopicStats(subjIdx);
+  const bar = document.getElementById('subj-bar-'+subjIdx);
+  const lbl = document.getElementById('subj-pct-'+subjIdx);
+  if(bar) bar.style.width = stat.pct+'%';
+  if(lbl) lbl.textContent = stat.pct+'% · '+DATA.disciplinas[subjIdx].topics.length+' tópicos';
+  renderHeader();
+  const ti = Number(key.split('-')[1]);
+  const topico = DATA.disciplinas[subjIdx].topics[ti];
+  if(topico && topico.id && CURRENT_USER){
+    sb.from('progresso_topicos').upsert({
+      aluno_id: CURRENT_USER.id, topico_id: topico.id, acertos: st.acertos, feitas: st.feitas
+    }, { onConflict: 'aluno_id,topico_id' }).then(({error})=>{ if(error) console.error('erro ao salvar tópico', error); });
+  }
+}
+
+/* ===== SIMULADOS ===== */
+function renderSimulados(filter){
+  filter = (filter||'').toLowerCase();
+  const html = DATA.simulados.map((s,si)=>{
+    const exams = s.exams.map((e,ei)=>({...e, ei})).filter(e=>{
+      if(!filter) return true;
+      return (e.name+' '+s.header).toLowerCase().includes(filter);
+    });
+    if(exams.length===0) return '';
+    const stat = subjectExamStats(si);
+    const rows = exams.map(e=>{
+      const key = si+'-'+e.ei;
+      const st = examState(key);
+      const p = pct(st.acertos, (Number(st.acertos)||0)+(Number(st.erros)||0));
+      const badgeCls = (st.acertos===0 && st.erros===0) ? 'neutral' : (p>=70?'good':'bad');
+      return `<tr>
+        <td>${escapeHtml(e.name)}</td>
+        <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.acertos}" onchange="updateExam('${key}',${si},'acertos',this.value)"></td>
+        <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.erros}" onchange="updateExam('${key}',${si},'erros',this.value)"></td>
+        <td style="width:70px;"><span class="badge ${badgeCls}" id="spct-${key}">${p}%</span></td>
+        <td style="width:110px;">${e.link?`<a class="link-btn" href="${e.link}" target="_blank" rel="noopener">Fazer ↗</a>`:`<span class="link-btn disabled">Sem link</span>`}</td>
+      </tr>`;
+    }).join('');
+    return `<div class="accordion" data-subj="${si}">
+      <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+        <div class="htxt"><h3>${escapeHtml(s.header.split(' - ')[1]||s.header)}</h3></div>
+        <div class="mini-bar"><div class="progress-track"><div class="progress-fill" id="ssubj-bar-${si}" style="width:${stat.pct}%"></div></div></div>
+        <span class="acc-count" id="ssubj-pct-${si}">${stat.pct}% · ${exams.length} simulados</span>
+        <span class="chev">›</span>
+      </button>
+      <div class="acc-body">
+        <table><thead><tr><th>Simulado</th><th>Acertos</th><th>Erros</th><th>%</th><th>Link</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('simList').innerHTML = html || `<div class="empty"><div class="big">🔍</div>Nenhum simulado encontrado.</div>`;
+}
+function updateExam(key, subjIdx, field, val){
+  const st = examState(key);
+  st[field] = Math.max(0, Number(val)||0);
+  const p = pct(st.acertos, (Number(st.acertos)||0)+(Number(st.erros)||0));
+  const badgeEl = document.getElementById('spct-'+key);
+  if(badgeEl){ badgeEl.textContent = p+'%'; badgeEl.className='badge '+((st.acertos===0 && st.erros===0)?'neutral':(p>=70?'good':'bad')); }
+  const stat = subjectExamStats(subjIdx);
+  const bar = document.getElementById('ssubj-bar-'+subjIdx);
+  const lbl = document.getElementById('ssubj-pct-'+subjIdx);
+  if(bar) bar.style.width = stat.pct+'%';
+  if(lbl) lbl.textContent = stat.pct+'% · '+DATA.simulados[subjIdx].exams.length+' simulados';
+  renderHeader();
+  const ei = Number(key.split('-')[1]);
+  const exame = DATA.simulados[subjIdx].exams[ei];
+  if(exame && exame.id && CURRENT_USER){
+    sb.from('progresso_simulados').upsert({
+      aluno_id: CURRENT_USER.id, simulado_id: exame.id, acertos: st.acertos, erros: st.erros
+    }, { onConflict: 'aluno_id,simulado_id' }).then(({error})=>{ if(error) console.error('erro ao salvar simulado', error); });
+  }
+}
+
+/* ===== REVISÕES ===== */
+function renderRevisoes(filter){
+  filter = (filter||'').toLowerCase();
+  const html = DATA.disciplinas.map((s,si)=>{
+    const topics = s.topics.map((t,ti)=>({...t, ti})).filter(t=>{
+      if(!filter) return true;
+      return (t.code+' '+t.text).toLowerCase().includes(filter);
+    });
+    if(topics.length===0) return '';
+    const rows = topics.map(t=>{
+      const key = si+'-'+t.ti;
+      const st = revState(key);
+      return `<tr>
+        <td>${escapeHtml(t.text)}</td>
+        <td style="width:72px;"><input class="num-input" type="number" min="0" max="100" value="${st.r1}" onchange="updateRev('${key}','r1',this.value)"> %</td>
+        <td style="width:72px;"><input class="num-input" type="number" min="0" max="100" value="${st.r2}" onchange="updateRev('${key}','r2',this.value)"> %</td>
+        <td style="width:72px;"><input class="num-input" type="number" min="0" max="100" value="${st.r3}" onchange="updateRev('${key}','r3',this.value)"> %</td>
+        <td style="min-width:140px;"><input class="txt-input" type="text" value="${escapeHtml(st.obs||'')}" placeholder="Observações" onchange="updateRev('${key}','obs',this.value)"></td>
+      </tr>`;
+    }).join('');
+    return `<div class="accordion" data-subj="${si}">
+      <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+        <div class="htxt"><h3>${escapeHtml(s.header.split(' - ')[1]||s.header)}</h3></div>
+        <span class="acc-count">${topics.length} tópicos</span>
+        <span class="chev">›</span>
+      </button>
+      <div class="acc-body">
+        <table><thead><tr><th>Tópico</th><th>Revisão 1</th><th>Revisão 2</th><th>Revisão 3</th><th>Obs.</th></tr></thead><tbody>${rows}</tbody></table>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('revList').innerHTML = html || `<div class="empty"><div class="big">🔍</div>Nenhum tópico encontrado.</div>`;
+}
+function updateRev(key, field, val){
+  const st = revState(key);
+  st[field] = field==='obs' ? val : Math.max(0, Math.min(100, Number(val)||0));
+  const [si, ti] = key.split('-').map(Number);
+  const topico = DATA.disciplinas[si] && DATA.disciplinas[si].topics[ti];
+  if(topico && topico.id && CURRENT_USER){
+    sb.from('progresso_revisoes').upsert({
+      aluno_id: CURRENT_USER.id, topico_id: topico.id, r1: st.r1, r2: st.r2, r3: st.r3, obs: st.obs
+    }, { onConflict: 'aluno_id,topico_id' }).then(({error})=>{ if(error) console.error('erro ao salvar revisão', error); });
+  }
+}
+
+/* ===== CONFIG ===== */
+function renderConfig(){
+  document.getElementById('cfgStart').value = state.config.startDate || '';
+  document.getElementById('cfgExam').value = state.config.examDate || '';
+}
+async function salvarConfigDatas(){
+  if(!CURRENT_USER || !CURRENT_CURSO) return;
+  await sb.from('config_aluno').upsert({
+    aluno_id: CURRENT_USER.id, curso_id: CURRENT_CURSO.id,
+    data_inicio: state.config.startDate || null, data_prova: state.config.examDate || null
+  }, { onConflict: 'aluno_id,curso_id' });
+}
+document.getElementById('cfgStart').addEventListener('change', e=>{ state.config.startDate = e.target.value; salvarConfigDatas(); renderHeader(); });
+document.getElementById('cfgExam').addEventListener('change', e=>{ state.config.examDate = e.target.value; salvarConfigDatas(); renderHeader(); });
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'adlinks-progresso.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('btnReset').addEventListener('click', async ()=>{
+  if(!confirm('Tem certeza que deseja apagar todo o progresso salvo? Essa ação não pode ser desfeita.')) return;
+  if(!CURRENT_USER) return;
+  await Promise.all([
+    sb.from('progresso_topicos').delete().eq('aluno_id', CURRENT_USER.id),
+    sb.from('progresso_itens').delete().eq('aluno_id', CURRENT_USER.id),
+    sb.from('progresso_simulados').delete().eq('aluno_id', CURRENT_USER.id),
+    sb.from('progresso_revisoes').delete().eq('aluno_id', CURRENT_USER.id),
+  ]);
+  location.reload();
+});
+
+/* ===== nav / search wiring ===== */
+const titles = {dashboard:'Painel', cronograma:'Cronograma', disciplinas:'Disciplinas', simulados:'Simulados', revisoes:'Revisões', config:'Configurações'};
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  document.getElementById('pageTitle').textContent = titles[name];
+  if(name==='dashboard') renderDashboard();
+  if(name==='cronograma'){ renderPrioridadesForm(); renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly); }
+  if(name==='disciplinas') renderDisciplinas(document.getElementById('discSearch').value);
+  if(name==='simulados') renderSimulados(document.getElementById('simSearch').value);
+  if(name==='revisoes') renderRevisoes(document.getElementById('revSearch').value);
+  if(name==='config') renderConfig();
+  document.getElementById('sidebar').classList.remove('open');
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click', ()=>showView(b.dataset.view)));
+document.getElementById('menuToggle').addEventListener('click', ()=> document.getElementById('sidebar').classList.toggle('open'));
+
+document.getElementById('cronoSearch').addEventListener('input', e=> renderCronograma(e.target.value, cronoPendingOnly));
+document.getElementById('cronoOnlyPending').addEventListener('click', function(){
+  cronoPendingOnly = !cronoPendingOnly;
+  this.classList.toggle('gold', cronoPendingOnly);
+  this.textContent = cronoPendingOnly ? 'Mostrando pendentes' : 'Só pendentes';
+  renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly);
+});
+document.getElementById('discSearch').addEventListener('input', e=> renderDisciplinas(e.target.value));
+document.getElementById('discExpandAll').addEventListener('click', ()=> renderDisciplinas(document.getElementById('discSearch').value, true));
+document.getElementById('simSearch').addEventListener('input', e=> renderSimulados(e.target.value));
+document.getElementById('revSearch').addEventListener('input', e=> renderRevisoes(e.target.value));
+
+/* ===== init (login, curso, progresso) ===== */
+async function iniciar(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ window.location.href = LOGIN_PAGE; return; }
+  CURRENT_USER = session.user;
+
+  const { data: perfil } = await sb.from('perfis').select('nome_completo,email').eq('id', CURRENT_USER.id).maybeSingle();
+  const nomeEl = document.getElementById('alunoNome');
+  if(nomeEl) nomeEl.textContent = (perfil && perfil.nome_completo) ? perfil.nome_completo : ((perfil && perfil.email) || CURRENT_USER.email);
+
+  const { data: acesso } = await sb.from('acessos')
+    .select('curso_id, cursos(id,nome,slug)')
+    .eq('aluno_id', CURRENT_USER.id).eq('ativo', true).limit(1).maybeSingle();
+
+  if(!acesso || !acesso.cursos){
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('noAccessScreen').classList.remove('hidden');
+    return;
+  }
+  CURRENT_CURSO = acesso.cursos;
+
+  document.getElementById('loadingText').textContent = 'Carregando disciplinas e simulados...';
+  const { data: disciplinasRows, error: errDisc } = await sb.from('disciplinas')
+    .select('id,header,ordem,topicos(id,code,texto,link,ordem),simulados(id,nome,link,ordem)')
+    .eq('curso_id', CURRENT_CURSO.id).order('ordem');
+  if(errDisc) console.error('erro ao carregar disciplinas', errDisc);
+  const disciplinasOrdenadas = (disciplinasRows||[]).slice().sort((a,b)=>a.ordem-b.ordem);
+  DATA.disciplinas = disciplinasOrdenadas.map(d=>({
+    id: d.id, header: d.header,
+    topics: (d.topicos||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(t=>({id:t.id, code:t.code, text:t.texto, link:t.link}))
+  }));
+  DATA.simulados = disciplinasOrdenadas.map(d=>({
+    header: d.header,
+    exams: (d.simulados||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(e=>({id:e.id, name:e.nome, link:e.link}))
+  }));
+
+  document.getElementById('loadingText').textContent = 'Carregando cronograma...';
+  const { data: diasRows, error: errDias } = await sb.from('dias_cronograma')
+    .select('id,dia,semana,revisao_de,ordem,itens_cronograma(id,code,disciplina,ordem)')
+    .eq('curso_id', CURRENT_CURSO.id).order('ordem');
+  if(errDias) console.error('erro ao carregar cronograma', errDias);
+  DATA.cronograma = (diasRows||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(d=>({
+    day: d.dia, week: d.semana, revisao_de: d.revisao_de,
+    items: (d.itens_cronograma||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(it=>({id:it.id, code:it.code, disc:it.disciplina}))
+  }));
+
+  document.getElementById('loadingText').textContent = 'Carregando seu progresso...';
+  const topicKeyById = {};
+  DATA.disciplinas.forEach((d,si)=> d.topics.forEach((t,ti)=>{ topicKeyById[t.id] = si+'-'+ti; }));
+  const itemKeyById = {};
+  DATA.cronograma.forEach(d=> d.items.forEach((it,idx)=>{ itemKeyById[it.id] = d.day+'#'+idx; }));
+  const examKeyById = {};
+  DATA.simulados.forEach((s,si)=> s.exams.forEach((e,ei)=>{ examKeyById[e.id] = si+'-'+ei; }));
+
+  const [pt, pi, ps, pr, cfg] = await Promise.all([
+    sb.from('progresso_topicos').select('*').eq('aluno_id', CURRENT_USER.id),
+    sb.from('progresso_itens').select('*').eq('aluno_id', CURRENT_USER.id),
+    sb.from('progresso_simulados').select('*').eq('aluno_id', CURRENT_USER.id),
+    sb.from('progresso_revisoes').select('*').eq('aluno_id', CURRENT_USER.id),
+    sb.from('config_aluno').select('*').eq('aluno_id', CURRENT_USER.id).eq('curso_id', CURRENT_CURSO.id).maybeSingle(),
+  ]);
+
+  (pt.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.topics[k] = {acertos:row.acertos||0, feitas:row.feitas||0}; });
+  (pi.data||[]).forEach(row=>{ const k = itemKeyById[row.item_id]; if(k) state.dayItems[k] = !!row.concluido; });
+  (ps.data||[]).forEach(row=>{ const k = examKeyById[row.simulado_id]; if(k) state.exams[k] = {acertos:row.acertos||0, erros:row.erros||0}; });
+  (pr.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.revisoes[k] = {r1:row.r1||0, r2:row.r2||0, r3:row.r3||0, obs:row.obs||''}; });
+
+  if(cfg.data){
+    state.config.startDate = cfg.data.data_inicio || '';
+    state.config.examDate = cfg.data.data_prova || '';
+    const extra = cfg.data.extra || {};
+    state.prioridades = extra.prioridades || {};
+    if(extra.personalizado){ state.customCronograma = buildPersonalizedCronograma(); }
+  }
+
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.remove('hidden');
+  renderHeader();
+  renderDashboard();
+}
+iniciar();
+</script>
+</body>
+</html>

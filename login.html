@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar — Área do Aluno | 3xAdm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --navy:#1A2F5A; --navy-dark:#0D1B3E; --navy-deeper:#081226;
+    --gold:#F5C400; --gold-light:#FFD740; --gold-soft:#FFF8D6;
+    --cream:#F8F9FC; --ink:#1B2436; --muted:#6B7494; --border:#EEF0F7;
+    --red:#C0504D; --red-bg:#FBEAE9; --green:#28a745; --green-bg:#E8F5EC;
+    --radius:14px; --shadow:0 4px 18px rgba(13,27,62,.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(245,196,0,.10), transparent 40%),
+      radial-gradient(circle at 85% 85%, rgba(26,47,90,.12), transparent 40%),
+      var(--cream);
+    font-family:'Plus Jakarta Sans', Arial, sans-serif; color:var(--ink);
+    padding:20px;
+  }
+  .card{
+    width:100%; max-width:400px; background:#fff; border:1px solid var(--border);
+    border-radius:20px; box-shadow:var(--shadow); padding:34px 30px;
+  }
+  .mark{font-family:'Outfit',sans-serif; font-weight:700; font-size:24px; color:var(--navy-deeper); text-align:center;}
+  .mark span{color:var(--gold);}
+  .tag{text-align:center; font-size:12px; color:var(--muted); margin-top:4px; margin-bottom:26px;}
+  .tabs{display:flex; background:var(--cream); border-radius:11px; padding:4px; margin-bottom:22px;}
+  .tabs button{
+    flex:1; border:none; background:transparent; padding:9px; border-radius:8px;
+    font-family:inherit; font-weight:700; font-size:13px; color:var(--muted); cursor:pointer;
+  }
+  .tabs button.active{background:var(--navy-deeper); color:#fff;}
+  label{display:block; font-size:12.5px; font-weight:700; color:var(--navy-deeper); margin:14px 0 6px;}
+  input{
+    width:100%; padding:11px 13px; border:1px solid var(--border); border-radius:10px;
+    font-family:inherit; font-size:14px; background:var(--cream);
+  }
+  input:focus{outline:2px solid var(--gold); border-color:var(--gold); background:#fff;}
+  .btn{
+    width:100%; margin-top:22px; background:var(--navy-deeper); color:#fff; border:none;
+    padding:13px; border-radius:11px; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .btn:hover{background:var(--navy);}
+  .btn:disabled{opacity:.6; cursor:default;}
+  .msg{margin-top:16px; padding:11px 13px; border-radius:10px; font-size:12.5px; display:none;}
+  .msg.show{display:block;}
+  .msg.err{background:var(--red-bg); color:var(--red);}
+  .msg.ok{background:var(--green-bg); color:var(--green);}
+  .foot{text-align:center; font-size:11.5px; color:var(--muted); margin-top:22px;}
+  .hidden{display:none;}
+  .spinner{width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; display:inline-block; animation:spin .7s linear infinite; vertical-align:-2px; margin-right:7px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="mark">AD<span>Links</span></div>
+  <div class="tag">Área do aluno · 3xAdm</div>
+
+  <div class="tabs">
+    <button type="button" id="tabLogin" class="active" onclick="switchTab('login')">Entrar</button>
+    <button type="button" id="tabSignup" onclick="switchTab('signup')">Criar conta</button>
+  </div>
+
+  <!-- LOGIN -->
+  <form id="formLogin">
+    <label for="loginEmail">E-mail</label>
+    <input type="email" id="loginEmail" required autocomplete="email" placeholder="voce@email.com">
+    <label for="loginSenha">Senha</label>
+    <input type="password" id="loginSenha" required autocomplete="current-password" placeholder="••••••••">
+    <button class="btn" type="submit" id="btnLogin">Entrar</button>
+  </form>
+
+  <!-- CADASTRO -->
+  <form id="formSignup" class="hidden">
+    <label for="suNome">Nome completo</label>
+    <input type="text" id="suNome" required autocomplete="name" placeholder="Seu nome">
+    <label for="suEmail">E-mail</label>
+    <input type="email" id="suEmail" required autocomplete="email" placeholder="voce@email.com">
+    <label for="suSenha">Senha</label>
+    <input type="password" id="suSenha" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+    <button class="btn" type="submit" id="btnSignup">Criar conta</button>
+  </form>
+
+  <div class="msg" id="msgBox"></div>
+  <div class="foot">Dúvidas? <a href="mailto:tresvezesadm@gmail.com" style="color:var(--navy);">tresvezesadm@gmail.com</a></div>
+</div>
+
+<script>
+  // ATENÇÃO: preencha com os dados do seu projeto Supabase.
+  const SUPABASE_URL = 'https://nlesxvkiekjmfvyqoets.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_ZupvmSDV4CoHM2OraLRhqA_8eM-HgRN';
+  // Pra onde o aluno vai depois de logar (ajuste esse link quando publicar o painel):
+  const REDIRECT_APOS_LOGIN = 'painel-adlinks.html';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function switchTab(tab){
+    document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+    document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
+    document.getElementById('formLogin').classList.toggle('hidden', tab!=='login');
+    document.getElementById('formSignup').classList.toggle('hidden', tab!=='signup');
+    hideMsg();
+  }
+  function showMsg(text, type){
+    const box = document.getElementById('msgBox');
+    box.textContent = text;
+    box.className = 'msg show ' + type;
+  }
+  function hideMsg(){
+    document.getElementById('msgBox').className = 'msg';
+  }
+  function setLoading(btn, loading, label){
+    btn.disabled = loading;
+    btn.innerHTML = loading ? '<span class="spinner"></span>Aguarde...' : label;
+  }
+
+  document.getElementById('formLogin').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    hideMsg();
+    const btn = document.getElementById('btnLogin');
+    setLoading(btn, true, 'Entrar');
+    const email = document.getElementById('loginEmail').value.trim();
+    const senha = document.getElementById('loginSenha').value;
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+    setLoading(btn, false, 'Entrar');
+    if(error){
+      showMsg(traduzErro(error.message), 'err');
+      return;
+    }
+    showMsg('Login realizado! Redirecionando...', 'ok');
+    setTimeout(()=>{ window.location.href = REDIRECT_APOS_LOGIN; }, 700);
+  });
+
+  document.getElementById('formSignup').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    hideMsg();
+    const btn = document.getElementById('btnSignup');
+    setLoading(btn, true, 'Criar conta');
+    const nome = document.getElementById('suNome').value.trim();
+    const email = document.getElementById('suEmail').value.trim();
+    const senha = document.getElementById('suSenha').value;
+    const { data, error } = await sb.auth.signUp({
+      email, password: senha,
+      options: { data: { full_name: nome } }
+    });
+    setLoading(btn, false, 'Criar conta');
+    if(error){
+      showMsg(traduzErro(error.message), 'err');
+      return;
+    }
+    if(data.session){
+      showMsg('Conta criada! Redirecionando...', 'ok');
+      setTimeout(()=>{ window.location.href = REDIRECT_APOS_LOGIN; }, 700);
+    } else {
+      showMsg('Conta criada! Verifique seu e-mail pra confirmar antes de entrar.', 'ok');
+    }
+  });
+
+  function traduzErro(msg){
+    if(/already registered|already exists/i.test(msg)) return 'Esse e-mail já tem cadastro. Tente entrar na aba "Entrar".';
+    if(/invalid login credentials/i.test(msg)) return 'E-mail ou senha incorretos.';
+    if(/password should be at least/i.test(msg)) return 'A senha precisa ter pelo menos 6 caracteres.';
+    if(/email not confirmed/i.test(msg)) return 'Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).';
+    return 'Algo deu errado: ' + msg;
+  }
+
+  // se já estiver logado, pula direto pro painel
+  sb.auth.getSession().then(({data})=>{
+    if(data.session){ window.location.href = REDIRECT_APOS_LOGIN; }
+  });
+</script>
+</body>
+</html>
