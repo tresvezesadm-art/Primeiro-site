@@ -51,6 +51,12 @@
   }
   .btn:hover{background:var(--navy);}
   .btn:disabled{opacity:.6; cursor:default;}
+  .btn-link{
+    background:none; border:none; color:var(--navy); font-size:12px; font-weight:600; cursor:pointer; padding:0; text-decoration:underline;
+  }
+  .forgot-link{
+    text-align:right; margin-top:8px;
+  }
   .msg{margin-top:16px; padding:11px 13px; border-radius:10px; font-size:12.5px; display:none;}
   .msg.show{display:block;}
   .msg.err{background:var(--red-bg); color:var(--red);}
@@ -59,6 +65,7 @@
   .hidden{display:none;}
   .spinner{width:15px; height:15px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; display:inline-block; animation:spin .7s linear infinite; vertical-align:-2px; margin-right:7px;}
   @keyframes spin{to{transform:rotate(360deg);}}
+  .sub-title{font-size:13px; color:var(--muted); margin-bottom:15px; text-align:center; line-height:1.4;}
 </style>
 </head>
 <body>
@@ -67,7 +74,7 @@
   <div class="mark">AD<span>Links</span></div>
   <div class="tag">Área do aluno · 3xAdm</div>
 
-  <div class="tabs">
+  <div class="tabs" id="tabsBox">
     <button type="button" id="tabLogin" class="active" onclick="switchTab('login')">Entrar</button>
     <button type="button" id="tabSignup" onclick="switchTab('signup')">Criar conta</button>
   </div>
@@ -78,6 +85,9 @@
     <input type="email" id="loginEmail" required autocomplete="email" placeholder="voce@email.com">
     <label for="loginSenha">Senha</label>
     <input type="password" id="loginSenha" required autocomplete="current-password" placeholder="••••••••">
+    <div class="forgot-link">
+      <button type="button" class="btn-link" onclick="switchMode('reset')">Esqueceu a senha?</button>
+    </div>
     <button class="btn" type="submit" id="btnLogin">Entrar</button>
   </form>
 
@@ -92,26 +102,55 @@
     <button class="btn" type="submit" id="btnSignup">Criar conta</button>
   </form>
 
+  <!-- RECUPERAR SENHA (SOLICITAR E-MAIL) -->
+  <form id="formReset" class="hidden">
+    <div class="sub-title">Digite seu e-mail cadastrado para receber as instruções de redefinição de senha.</div>
+    <label for="resetEmail">E-mail</label>
+    <input type="email" id="resetEmail" required autocomplete="email" placeholder="voce@email.com">
+    <button class="btn" type="submit" id="btnReset">Enviar e-mail</button>
+    <div style="text-align:center; margin-top:15px;">
+      <button type="button" class="btn-link" onclick="switchMode('login')">Voltar para o Entrar</button>
+    </div>
+  </form>
+
+  <!-- DEFINIR NOVA SENHA (PÓS CLIQUE NO E-MAIL) -->
+  <form id="formNewPassword" class="hidden">
+    <div class="sub-title">Crie uma nova senha para a sua conta.</div>
+    <label for="newPassword">Nova Senha</label>
+    <input type="password" id="newPassword" required minlength="6" placeholder="Mínimo 6 caracteres">
+    <button class="btn" type="submit" id="btnNewPassword">Salvar nova senha</button>
+  </form>
+
   <div class="msg" id="msgBox"></div>
   <div class="foot">Dúvidas? <a href="mailto:tresvezesadm@gmail.com" style="color:var(--navy);">tresvezesadm@gmail.com</a></div>
 </div>
 
 <script>
-  // ATENÇÃO: preencha com os dados do seu projeto Supabase.
   const SUPABASE_URL = 'https://nlesxvkiekjmfvyqoets.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_ZupvmSDV4CoHM2OraLRhqA_8eM-HgRN';
-  // Pra onde o aluno vai depois de logar (ajuste esse link quando publicar o painel):
   const REDIRECT_APOS_LOGIN = 'painel-adlinks.html';
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  let isRecovery = false;
+
   function switchTab(tab){
-    document.getElementById('tabLogin').classList.toggle('active', tab==='login');
-    document.getElementById('tabSignup').classList.toggle('active', tab==='signup');
-    document.getElementById('formLogin').classList.toggle('hidden', tab!=='login');
-    document.getElementById('formSignup').classList.toggle('hidden', tab!=='signup');
+    if(isRecovery) return;
+    switchMode(tab);
+  }
+
+  function switchMode(mode){
+    document.getElementById('tabsBox').classList.toggle('hidden', mode === 'reset' || mode === 'newpass');
+    document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+    document.getElementById('tabSignup').classList.toggle('active', mode === 'signup');
+    
+    document.getElementById('formLogin').classList.toggle('hidden', mode !== 'login');
+    document.getElementById('formSignup').classList.toggle('hidden', mode !== 'signup');
+    document.getElementById('formReset').classList.toggle('hidden', mode !== 'reset');
+    document.getElementById('formNewPassword').classList.toggle('hidden', mode !== 'newpass');
     hideMsg();
   }
+
   function showMsg(text, type){
     const box = document.getElementById('msgBox');
     box.textContent = text;
@@ -125,6 +164,7 @@
     btn.innerHTML = loading ? '<span class="spinner"></span>Aguarde...' : label;
   }
 
+  // LOGIN
   document.getElementById('formLogin').addEventListener('submit', async (e)=>{
     e.preventDefault();
     hideMsg();
@@ -142,6 +182,7 @@
     setTimeout(()=>{ window.location.href = REDIRECT_APOS_LOGIN; }, 700);
   });
 
+  // CADASTRO
   document.getElementById('formSignup').addEventListener('submit', async (e)=>{
     e.preventDefault();
     hideMsg();
@@ -167,6 +208,41 @@
     }
   });
 
+  // SOLICITAR REDEFINIÇÃO
+  document.getElementById('formReset').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    hideMsg();
+    const btn = document.getElementById('btnReset');
+    setLoading(btn, true, 'Enviar e-mail');
+    const email = document.getElementById('resetEmail').value.trim();
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    setLoading(btn, false, 'Enviar e-mail');
+    if(error){
+      showMsg(traduzErro(error.message), 'err');
+      return;
+    }
+    showMsg('E-mail enviado! Verifique sua caixa de entrada e o spam para redefinir a senha.', 'ok');
+  });
+
+  // SALVAR NOVA SENHA
+  document.getElementById('formNewPassword').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    hideMsg();
+    const btn = document.getElementById('btnNewPassword');
+    setLoading(btn, true, 'Salvar nova senha');
+    const novaSenha = document.getElementById('newPassword').value;
+    const { error } = await sb.auth.updateUser({ password: novaSenha });
+    setLoading(btn, false, 'Salvar nova senha');
+    if(error){
+      showMsg(traduzErro(error.message), 'err');
+      return;
+    }
+    showMsg('Senha alterada com sucesso! Redirecionando...', 'ok');
+    setTimeout(()=>{ window.location.href = REDIRECT_APOS_LOGIN; }, 1000);
+  });
+
   function traduzErro(msg){
     if(/already registered|already exists/i.test(msg)) return 'Esse e-mail já tem cadastro. Tente entrar na aba "Entrar".';
     if(/invalid login credentials/i.test(msg)) return 'E-mail ou senha incorretos.';
@@ -175,9 +251,26 @@
     return 'Algo deu errado: ' + msg;
   }
 
-  // se já estiver logado, pula direto pro painel
+  // Detecta quando o aluno clica no link enviado para o e-mail dele
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      isRecovery = true;
+      switchMode('newpass');
+      showMsg('Digite sua nova senha abaixo.', 'ok');
+    }
+  });
+
+  // Verifica se a URL já vem com o parâmetro de recuperação
+  if (window.location.hash.includes('type=recovery')) {
+    isRecovery = true;
+    switchMode('newpass');
+  }
+
+  // Se já estiver logado (e não for redefinição de senha), pula direto pro painel
   sb.auth.getSession().then(({data})=>{
-    if(data.session){ window.location.href = REDIRECT_APOS_LOGIN; }
+    if(data.session && !isRecovery && !window.location.hash.includes('type=recovery')){
+      window.location.href = REDIRECT_APOS_LOGIN;
+    }
   });
 </script>
 </body>
