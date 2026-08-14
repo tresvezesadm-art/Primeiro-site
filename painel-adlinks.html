@@ -205,6 +205,11 @@
   .item-row input{width:17px; height:17px; accent-color:var(--navy); flex-shrink:0;}
   .item-row.done .item-name{color:var(--muted); text-decoration:line-through;}
   .item-name{font-size:13.5px; color:var(--ink);}
+  .meta-row{display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
+  .meta-ic{font-size:13px; flex-shrink:0;}
+  .meta-input{flex:1; border:none; background:transparent; font-size:12.5px; color:var(--ink); padding:4px 0;}
+  .meta-input::placeholder{color:var(--muted);}
+  .meta-input:focus{outline:none; border-bottom:1px solid var(--gold);}
   .item-name.is-sim{color:var(--navy); font-weight:700;}
   .item-name.is-rev{color:#6A4A9C; font-weight:700;}
   .week-heading{
@@ -296,7 +301,17 @@
   </div>
 </div>
 
+<div id="cursoPickerScreen" class="hidden" style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--cream); font-family:'Plus Jakarta Sans',sans-serif; padding:20px;">
+  <div style="max-width:420px; width:100%; text-align:center; background:#fff; border:1px solid var(--border); border-radius:16px; padding:30px; box-shadow:var(--shadow);">
+    <div style="font-family:'Outfit',sans-serif; font-weight:700; font-size:20px; color:var(--navy-deeper); margin-bottom:4px;">Qual curso você quer estudar?</div>
+    <p style="color:var(--muted); font-size:13px; margin:0 0 18px;">Você tem acesso a mais de um curso. Escolha um pra continuar (dá pra trocar quando quiser).</p>
+    <div id="cursoPickerList" style="display:flex; flex-direction:column; gap:10px;"></div>
+    <button class="btn ghost" onclick="sair()" style="margin-top:16px;">Sair</button>
+  </div>
+</div>
+
 <div class="app hidden" id="appRoot">
+
 
   <aside class="sidebar" id="sidebar">
     <div class="brand">
@@ -311,6 +326,11 @@
       <button class="nav-item" data-view="revisoes"><span class="ic">↺</span> Revisões</button>
       <button class="nav-item" data-view="config"><span class="ic">⚙</span> Configurações</button>
     </nav>
+    <div id="cursoAtualBox" class="hidden" style="padding:0 22px 10px;">
+      <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:rgba(239,233,218,.5); margin-bottom:3px;">Curso atual</div>
+      <div id="cursoAtualNome" style="font-size:13px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div>
+      <button onclick="trocarCurso()" style="background:transparent; border:none; color:var(--gold-light); font-size:11.5px; font-weight:700; cursor:pointer; text-decoration:underline; padding:0; margin-top:3px;">Trocar curso</button>
+    </div>
     <div class="sidebar-foot" style="justify-content:space-between;">
       <span id="alunoNome" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">@3vezesadm</span>
       <button onclick="sair()" style="background:transparent; border:none; color:rgba(239,233,218,.6); font-size:11.5px; font-weight:700; cursor:pointer; text-decoration:underline; flex-shrink:0;">Sair</button>
@@ -341,6 +361,11 @@
 
         <div class="grid cols-4" style="margin-top:22px;" id="kpiGrid"></div>
 
+        <div id="revPendCard" class="hidden" style="margin-top:26px;">
+          <div class="section-title" style="margin-top:0;"><h2>Revisões pendentes</h2></div>
+          <div class="card"><div id="revPendList"></div></div>
+        </div>
+
         <div class="section-title"><h2>Trilha do cronograma</h2><span class="hint" id="trailHint"></span></div>
         <div class="card"><div class="trail" id="trail"></div></div>
 
@@ -350,7 +375,7 @@
             <div id="perfBars"></div>
           </div>
           <div class="card">
-            <div class="section-title" style="margin-top:0;"><h2 style="font-size:16px;">Simulados por disciplina</h2></div>
+            <div class="section-title" style="margin-top:0;"><h2 style="font-size:16px;">Simulados</h2></div>
             <div id="simBars"></div>
           </div>
         </div>
@@ -445,7 +470,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let DATA = {disciplinas:[], cronograma:[], simulados:[]};
 let CURRENT_USER = null;
 let CURRENT_CURSO = null;
-let state = {topics:{}, dayItems:{}, revisoes:{}, exams:{}, config:{examDate:'', startDate:''}, prioridades:{}, customCronograma:null};
+let state = {topics:{}, dayItems:{}, revisoes:{}, exams:{}, config:{examDate:'', startDate:''}, prioridades:{}, customCronograma:null, metas:{}};
 
 function sair(){
   sb.auth.signOut().then(()=>{ window.location.href = LOGIN_PAGE; });
@@ -485,7 +510,7 @@ function buildPersonalizedCronograma(){
   const seq = weightedRoundRobinSequence(items, regularSlots);
   let p = 0;
   return DATA.cronograma.map(d=>({
-    day: d.day, week: d.week, revisao_de: d.revisao_de,
+    id: d.id, day: d.day, week: d.week, revisao_de: d.revisao_de,
     items: d.items.map(it=>{
       if(it.code==='SIM' || it.code==='REV') return {...it};
       const chosen = itemsByKey[seq[p++]];
@@ -529,7 +554,7 @@ function topicState(key){
   return state.topics[key];
 }
 function revState(key){
-  if(!state.revisoes[key]) state.revisoes[key] = {r1:0,r2:0,r3:0,obs:''};
+  if(!state.revisoes[key]) state.revisoes[key] = {r1:0,r2:0,r3:0,obs:'',data_revisao:''};
   return state.revisoes[key];
 }
 function examState(key){
@@ -573,11 +598,10 @@ function daysFullyDoneCount(){
   });
   return n;
 }
-function subjectExamStats(subjIdx){
-  const s = DATA.simulados[subjIdx];
+function examStats(){
   let acertos=0, erros=0;
-  s.exams.forEach((e,i)=>{
-    const st = state.exams[subjIdx+'-'+i];
+  DATA.simulados.forEach((e,i)=>{
+    const st = state.exams[String(i)];
     if(st){ acertos += Number(st.acertos)||0; erros += Number(st.erros)||0; }
   });
   return {acertos, erros, feitas: acertos+erros, pct: pct(acertos, acertos+erros)};
@@ -586,19 +610,39 @@ function subjectExamStats(subjIdx){
 /* ===== header + dashboard ===== */
 function daysBetween(a,b){ return Math.ceil((b-a)/(1000*60*60*24)); }
 
+function revisoesPendentes(){
+  const hoje = new Date(new Date().toDateString());
+  const lista = [];
+  DATA.disciplinas.forEach((s,si)=> s.topics.forEach((t,ti)=>{
+    const key = si+'-'+ti;
+    const st = state.revisoes[key];
+    if(st && st.data_revisao){
+      const diff = daysBetween(hoje, new Date(st.data_revisao));
+      if(diff<=2){
+        lista.push({disciplina: s.header.split(' - ')[1]||s.header, topico: t.text, data: st.data_revisao, diff});
+      }
+    }
+  }));
+  lista.sort((a,b)=> a.diff-b.diff);
+  return lista;
+}
+
 function renderHeader(){
   const chips = document.getElementById('headerChips');
   const ov = overallTopicStats();
   const cr = cronogramaStats();
+  const revPend = revisoesPendentes();
   let countdownTxt = '';
   if(state.config.examDate){
     const diff = daysBetween(new Date(new Date().toDateString()), new Date(state.config.examDate));
     countdownTxt = diff>=0 ? `<span class="chip"><b>${diff}</b> dias p/ prova</span>` : `<span class="chip warn">Prova já passou</span>`;
   }
+  const revTxt = revPend.length>0 ? `<span class="chip warn"><b>${revPend.length}</b> revisão${revPend.length>1?'ões':''} pendente${revPend.length>1?'s':''}</span>` : '';
   chips.innerHTML = `
     ${countdownTxt}
     <span class="chip"><b>${cr.pct}%</b> cronograma</span>
     <span class="chip"><b>${ov.pct}%</b> desempenho geral</span>
+    ${revTxt}
   `;
 }
 
@@ -606,6 +650,23 @@ function renderDashboard(){
   const ov = overallTopicStats();
   const cr = cronogramaStats();
   const daysDone = daysFullyDoneCount();
+
+  // revisões pendentes
+  const revPend = revisoesPendentes();
+  const revCard = document.getElementById('revPendCard');
+  if(revPend.length===0){
+    revCard.classList.add('hidden');
+  } else {
+    revCard.classList.remove('hidden');
+    document.getElementById('revPendList').innerHTML = revPend.map(r=>{
+      const label = r.diff<0 ? `atrasada há ${Math.abs(r.diff)} dia${Math.abs(r.diff)>1?'s':''}` : (r.diff===0 ? 'hoje' : `em ${r.diff} dia${r.diff>1?'s':''}`);
+      const cls = r.diff<0 ? 'bad' : (r.diff<=1 ? 'bad' : 'neutral');
+      return `<div class="bar-row" style="grid-template-columns:1fr auto;">
+        <div class="name">${escapeHtml(r.topico)} <span style="color:var(--muted); font-weight:400;">· ${escapeHtml(r.disciplina)}</span></div>
+        <span class="badge ${cls}">${label}</span>
+      </div>`;
+    }).join('');
+  }
 
   // hero
   const heroTitle = document.getElementById('heroTitle');
@@ -629,11 +690,7 @@ function renderDashboard(){
 
   // KPIs
   const totalTopics = DATA.disciplinas.reduce((n,s)=>n+s.topics.length,0);
-  const simAll = DATA.simulados.reduce((acc,si)=>{
-    const idx = DATA.simulados.indexOf(si);
-    si.exams.forEach((e,i)=>{ const st=state.exams[idx+'-'+i]; if(st){ acc.acertos+=Number(st.acertos)||0; acc.erros+=Number(st.erros)||0; } });
-    return acc;
-  }, {acertos:0,erros:0});
+  const simAll = examStats();
 
   document.getElementById('kpiGrid').innerHTML = `
     <div class="card kpi">
@@ -653,8 +710,8 @@ function renderDashboard(){
     </div>
     <div class="card kpi">
       <div class="label">Simulados</div>
-      <div class="value">${pct(simAll.acertos, simAll.acertos+simAll.erros)}%</div>
-      <div class="sub">${simAll.acertos} acertos em ${simAll.acertos+simAll.erros} questões de simulado</div>
+      <div class="value">${simAll.pct}%</div>
+      <div class="sub">${simAll.acertos} acertos em ${simAll.feitas} questões de simulado</div>
     </div>
   `;
 
@@ -686,13 +743,14 @@ function renderDashboard(){
     </div>`;
   }).join('');
 
-  // simulados bars
-  document.getElementById('simBars').innerHTML = DATA.simulados.map((s,i)=>{
-    const st = subjectExamStats(i);
+  // simulados bars (cada simulado é geral, cobre o edital inteiro)
+  document.getElementById('simBars').innerHTML = DATA.simulados.map((e,i)=>{
+    const st = state.exams[String(i)] || {acertos:0, erros:0};
+    const p = pct(st.acertos, (st.acertos||0)+(st.erros||0));
     return `<div class="bar-row">
-      <div class="name">${escapeHtml(s.header.split(' - ')[1]||s.header)}</div>
-      <div class="progress-track"><div class="progress-fill" style="width:${st.pct}%"></div></div>
-      <div class="pct">${st.pct}%</div>
+      <div class="name">${escapeHtml(e.name)}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${p}%"></div></div>
+      <div class="pct">${p}%</div>
     </div>`;
   }).join('');
 }
@@ -770,6 +828,10 @@ function renderCronograma(filter, onlyPending){
           <span class="day-count">${itemsCount? doneCount+'/'+itemsCount : 'livre'}</span>
         </div>
         <div class="items">${rows || '<div class="item-row" style="cursor:default;"><span class="item-name" style="color:var(--muted);">Dia livre, sem itens no plano.</span></div>'}</div>
+        <div class="meta-row">
+          <span class="meta-ic">🎯</span>
+          <input type="text" class="meta-input" placeholder="Sua meta pra esse dia (opcional)" value="${escapeHtml(metaState(d.day))}" onchange="updateMeta('${d.day}',this.value)">
+        </div>
       </div>`;
     });
   });
@@ -792,6 +854,20 @@ function toggleDayItem(day, idx){
   }
 }
 let cronoPendingOnly = false;
+
+function metaState(day){
+  if(state.metas[day]===undefined) state.metas[day] = '';
+  return state.metas[day];
+}
+function updateMeta(day, val){
+  state.metas[day] = val;
+  const d = getCronograma().find(x=>x.day===day);
+  if(d && d.id && CURRENT_USER){
+    sb.from('metas_dia').upsert({
+      aluno_id: CURRENT_USER.id, dia_id: d.id, meta: val
+    }, { onConflict: 'aluno_id,dia_id' }).then(({error})=>{ if(error) console.error('erro ao salvar meta do dia', error); });
+  }
+}
 
 /* ===== DISCIPLINAS ===== */
 function renderDisciplinas(filter, forceOpenAll){
@@ -860,54 +936,40 @@ function updateTopic(key, subjIdx, field, val){
 /* ===== SIMULADOS ===== */
 function renderSimulados(filter){
   filter = (filter||'').toLowerCase();
-  const html = DATA.simulados.map((s,si)=>{
-    const exams = s.exams.map((e,ei)=>({...e, ei})).filter(e=>{
-      if(!filter) return true;
-      return (e.name+' '+s.header).toLowerCase().includes(filter);
-    });
-    if(exams.length===0) return '';
-    const stat = subjectExamStats(si);
-    const rows = exams.map(e=>{
-      const key = si+'-'+e.ei;
-      const st = examState(key);
-      const p = pct(st.acertos, (Number(st.acertos)||0)+(Number(st.erros)||0));
-      const badgeCls = (st.acertos===0 && st.erros===0) ? 'neutral' : (p>=70?'good':'bad');
-      return `<tr>
-        <td>${escapeHtml(e.name)}</td>
-        <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.acertos}" onchange="updateExam('${key}',${si},'acertos',this.value)"></td>
-        <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.erros}" onchange="updateExam('${key}',${si},'erros',this.value)"></td>
-        <td style="width:70px;"><span class="badge ${badgeCls}" id="spct-${key}">${p}%</span></td>
-        <td style="width:110px;">${e.link?`<a class="link-btn" href="${e.link}" target="_blank" rel="noopener">Fazer ↗</a>`:`<span class="link-btn disabled">Sem link</span>`}</td>
-      </tr>`;
-    }).join('');
-    return `<div class="accordion" data-subj="${si}">
-      <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
-        <div class="htxt"><h3>${escapeHtml(s.header.split(' - ')[1]||s.header)}</h3></div>
-        <div class="mini-bar"><div class="progress-track"><div class="progress-fill" id="ssubj-bar-${si}" style="width:${stat.pct}%"></div></div></div>
-        <span class="acc-count" id="ssubj-pct-${si}">${stat.pct}% · ${exams.length} simulados</span>
-        <span class="chev">›</span>
-      </button>
-      <div class="acc-body">
-        <table><thead><tr><th>Simulado</th><th>Acertos</th><th>Erros</th><th>%</th><th>Link</th></tr></thead><tbody>${rows}</tbody></table>
-      </div>
-    </div>`;
+  const exams = DATA.simulados.map((e,ei)=>({...e, ei})).filter(e=>{
+    if(!filter) return true;
+    return e.name.toLowerCase().includes(filter);
+  });
+  if(exams.length===0){
+    document.getElementById('simList').innerHTML = `<div class="empty"><div class="big">🔍</div>Nenhum simulado encontrado.</div>`;
+    return;
+  }
+  const rows = exams.map(e=>{
+    const key = String(e.ei);
+    const st = examState(key);
+    const p = pct(st.acertos, (Number(st.acertos)||0)+(Number(st.erros)||0));
+    const badgeCls = (st.acertos===0 && st.erros===0) ? 'neutral' : (p>=70?'good':'bad');
+    return `<tr>
+      <td>${escapeHtml(e.name)}</td>
+      <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.acertos}" onchange="updateExam('${key}','acertos',this.value)"></td>
+      <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.erros}" onchange="updateExam('${key}','erros',this.value)"></td>
+      <td style="width:70px;"><span class="badge ${badgeCls}" id="spct-${key}">${p}%</span></td>
+      <td style="width:110px;">${e.link?`<a class="link-btn" href="${e.link}" target="_blank" rel="noopener">Fazer ↗</a>`:`<span class="link-btn disabled">Sem link</span>`}</td>
+    </tr>`;
   }).join('');
-  document.getElementById('simList').innerHTML = html || `<div class="empty"><div class="big">🔍</div>Nenhum simulado encontrado.</div>`;
+  document.getElementById('simList').innerHTML = `
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table><thead><tr><th style="padding-left:18px;">Simulado</th><th>Acertos</th><th>Erros</th><th>%</th><th style="padding-right:18px;">Link</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
 }
-function updateExam(key, subjIdx, field, val){
+function updateExam(key, field, val){
   const st = examState(key);
   st[field] = Math.max(0, Number(val)||0);
   const p = pct(st.acertos, (Number(st.acertos)||0)+(Number(st.erros)||0));
   const badgeEl = document.getElementById('spct-'+key);
   if(badgeEl){ badgeEl.textContent = p+'%'; badgeEl.className='badge '+((st.acertos===0 && st.erros===0)?'neutral':(p>=70?'good':'bad')); }
-  const stat = subjectExamStats(subjIdx);
-  const bar = document.getElementById('ssubj-bar-'+subjIdx);
-  const lbl = document.getElementById('ssubj-pct-'+subjIdx);
-  if(bar) bar.style.width = stat.pct+'%';
-  if(lbl) lbl.textContent = stat.pct+'% · '+DATA.simulados[subjIdx].exams.length+' simulados';
   renderHeader();
-  const ei = Number(key.split('-')[1]);
-  const exame = DATA.simulados[subjIdx].exams[ei];
+  const exame = DATA.simulados[Number(key)];
   if(exame && exame.id && CURRENT_USER){
     sb.from('progresso_simulados').upsert({
       aluno_id: CURRENT_USER.id, simulado_id: exame.id, acertos: st.acertos, erros: st.erros
@@ -918,6 +980,7 @@ function updateExam(key, subjIdx, field, val){
 /* ===== REVISÕES ===== */
 function renderRevisoes(filter){
   filter = (filter||'').toLowerCase();
+  const hoje = new Date(new Date().toDateString());
   const html = DATA.disciplinas.map((s,si)=>{
     const topics = s.topics.map((t,ti)=>({...t, ti})).filter(t=>{
       if(!filter) return true;
@@ -927,11 +990,18 @@ function renderRevisoes(filter){
     const rows = topics.map(t=>{
       const key = si+'-'+t.ti;
       const st = revState(key);
+      let avisoCls = '';
+      if(st.data_revisao){
+        const diff = daysBetween(hoje, new Date(st.data_revisao));
+        if(diff<0) avisoCls = 'style="border-color:var(--red); background:var(--red-bg);"';
+        else if(diff<=2) avisoCls = 'style="border-color:var(--gold); background:var(--gold-soft);"';
+      }
       return `<tr>
         <td>${escapeHtml(t.text)}</td>
         <td style="width:72px;"><input class="num-input" type="number" min="0" max="100" value="${st.r1}" onchange="updateRev('${key}','r1',this.value)"> %</td>
         <td style="width:72px;"><input class="num-input" type="number" min="0" max="100" value="${st.r2}" onchange="updateRev('${key}','r2',this.value)"> %</td>
         <td style="width:72px;"><input class="num-input" type="number" min="0" max="100" value="${st.r3}" onchange="updateRev('${key}','r3',this.value)"> %</td>
+        <td style="width:150px;"><input class="date-input" ${avisoCls} type="date" value="${st.data_revisao||''}" onchange="updateRev('${key}','data_revisao',this.value)"></td>
         <td style="min-width:140px;"><input class="txt-input" type="text" value="${escapeHtml(st.obs||'')}" placeholder="Observações" onchange="updateRev('${key}','obs',this.value)"></td>
       </tr>`;
     }).join('');
@@ -942,7 +1012,7 @@ function renderRevisoes(filter){
         <span class="chev">›</span>
       </button>
       <div class="acc-body">
-        <table><thead><tr><th>Tópico</th><th>Revisão 1</th><th>Revisão 2</th><th>Revisão 3</th><th>Obs.</th></tr></thead><tbody>${rows}</tbody></table>
+        <table><thead><tr><th>Tópico</th><th>Revisão 1</th><th>Revisão 2</th><th>Revisão 3</th><th>Próxima revisão</th><th>Obs.</th></tr></thead><tbody>${rows}</tbody></table>
       </div>
     </div>`;
   }).join('');
@@ -950,14 +1020,17 @@ function renderRevisoes(filter){
 }
 function updateRev(key, field, val){
   const st = revState(key);
-  st[field] = field==='obs' ? val : Math.max(0, Math.min(100, Number(val)||0));
+  if(field==='obs' || field==='data_revisao') st[field] = val;
+  else st[field] = Math.max(0, Math.min(100, Number(val)||0));
   const [si, ti] = key.split('-').map(Number);
   const topico = DATA.disciplinas[si] && DATA.disciplinas[si].topics[ti];
   if(topico && topico.id && CURRENT_USER){
     sb.from('progresso_revisoes').upsert({
-      aluno_id: CURRENT_USER.id, topico_id: topico.id, r1: st.r1, r2: st.r2, r3: st.r3, obs: st.obs
+      aluno_id: CURRENT_USER.id, topico_id: topico.id, r1: st.r1, r2: st.r2, r3: st.r3, obs: st.obs,
+      data_revisao: st.data_revisao || null
     }, { onConflict: 'aluno_id,topico_id' }).then(({error})=>{ if(error) console.error('erro ao salvar revisão', error); });
   }
+  renderHeader();
 }
 
 /* ===== CONFIG ===== */
@@ -990,6 +1063,7 @@ document.getElementById('btnReset').addEventListener('click', async ()=>{
     sb.from('progresso_itens').delete().eq('aluno_id', CURRENT_USER.id),
     sb.from('progresso_simulados').delete().eq('aluno_id', CURRENT_USER.id),
     sb.from('progresso_revisoes').delete().eq('aluno_id', CURRENT_USER.id),
+    sb.from('metas_dia').delete().eq('aluno_id', CURRENT_USER.id),
   ]);
   location.reload();
 });
@@ -1025,7 +1099,10 @@ document.getElementById('discExpandAll').addEventListener('click', ()=> renderDi
 document.getElementById('simSearch').addEventListener('input', e=> renderSimulados(e.target.value));
 document.getElementById('revSearch').addEventListener('input', e=> renderRevisoes(e.target.value));
 
-/* ===== init (login, curso, progresso) ===== */
+/* ===== init (login, escolha de curso, progresso) ===== */
+const CURSO_LEMBRADO_KEY = 'adlinks_curso_atual';
+let MEUS_CURSOS = [];
+
 async function iniciar(){
   const { data: { session } } = await sb.auth.getSession();
   if(!session){ window.location.href = LOGIN_PAGE; return; }
@@ -1035,20 +1112,76 @@ async function iniciar(){
   const nomeEl = document.getElementById('alunoNome');
   if(nomeEl) nomeEl.textContent = (perfil && perfil.nome_completo) ? perfil.nome_completo : ((perfil && perfil.email) || CURRENT_USER.email);
 
-  const { data: acesso } = await sb.from('acessos')
+  const { data: acessos } = await sb.from('acessos')
     .select('curso_id, cursos(id,nome,slug)')
-    .eq('aluno_id', CURRENT_USER.id).eq('ativo', true).limit(1).maybeSingle();
+    .eq('aluno_id', CURRENT_USER.id).eq('ativo', true);
 
-  if(!acesso || !acesso.cursos){
+  MEUS_CURSOS = (acessos||[]).map(a=>a.cursos).filter(Boolean);
+
+  if(MEUS_CURSOS.length===0){
     document.getElementById('loadingScreen').classList.add('hidden');
     document.getElementById('noAccessScreen').classList.remove('hidden');
     return;
   }
-  CURRENT_CURSO = acesso.cursos;
+
+  if(MEUS_CURSOS.length===1){
+    await carregarCurso(MEUS_CURSOS[0]);
+    return;
+  }
+
+  // mais de um curso: tenta usar o último escolhido, senão mostra o seletor
+  let lembrado = null;
+  try{ lembrado = localStorage.getItem(CURSO_LEMBRADO_KEY); }catch(e){}
+  const cursoLembrado = lembrado && MEUS_CURSOS.find(c=>c.id===lembrado);
+  if(cursoLembrado){
+    await carregarCurso(cursoLembrado);
+    return;
+  }
+  mostrarSeletorDeCurso();
+}
+
+function mostrarSeletorDeCurso(){
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('appRoot').classList.add('hidden');
+  const lista = document.getElementById('cursoPickerList');
+  lista.innerHTML = MEUS_CURSOS.map(c=>`
+    <button class="btn ghost" style="text-align:left; padding:14px 16px;" onclick='escolherCurso(${JSON.stringify(c.id)})'>${escapeHtml(c.nome)}</button>
+  `).join('');
+  document.getElementById('cursoPickerScreen').classList.remove('hidden');
+}
+async function escolherCurso(cursoId){
+  const curso = MEUS_CURSOS.find(c=>c.id===cursoId);
+  if(!curso) return;
+  document.getElementById('cursoPickerScreen').classList.add('hidden');
+  document.getElementById('loadingScreen').classList.remove('hidden');
+  document.getElementById('loadingText').textContent = 'Carregando seu curso...';
+  await carregarCurso(curso);
+}
+function trocarCurso(){
+  try{ localStorage.removeItem(CURSO_LEMBRADO_KEY); }catch(e){}
+  document.getElementById('appRoot').classList.add('hidden');
+  mostrarSeletorDeCurso();
+}
+
+async function carregarCurso(curso){
+  CURRENT_CURSO = curso;
+  try{ localStorage.setItem(CURSO_LEMBRADO_KEY, curso.id); }catch(e){}
+
+  // zera dados/estado de um curso carregado anteriormente (troca de curso)
+  DATA = {disciplinas:[], cronograma:[], simulados:[]};
+  state = {topics:{}, dayItems:{}, revisoes:{}, exams:{}, config:{examDate:'', startDate:''}, prioridades:{}, customCronograma:null, metas:{}};
+
+  const cursoBox = document.getElementById('cursoAtualBox');
+  if(MEUS_CURSOS.length>1){
+    cursoBox.classList.remove('hidden');
+    document.getElementById('cursoAtualNome').textContent = curso.nome;
+  } else {
+    cursoBox.classList.add('hidden');
+  }
 
   document.getElementById('loadingText').textContent = 'Carregando disciplinas e simulados...';
   const { data: disciplinasRows, error: errDisc } = await sb.from('disciplinas')
-    .select('id,header,ordem,topicos(id,code,texto,link,ordem),simulados(id,nome,link,ordem)')
+    .select('id,header,ordem,topicos(id,code,texto,link,ordem)')
     .eq('curso_id', CURRENT_CURSO.id).order('ordem');
   if(errDisc) console.error('erro ao carregar disciplinas', errDisc);
   const disciplinasOrdenadas = (disciplinasRows||[]).slice().sort((a,b)=>a.ordem-b.ordem);
@@ -1056,10 +1189,12 @@ async function iniciar(){
     id: d.id, header: d.header,
     topics: (d.topicos||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(t=>({id:t.id, code:t.code, text:t.texto, link:t.link}))
   }));
-  DATA.simulados = disciplinasOrdenadas.map(d=>({
-    header: d.header,
-    exams: (d.simulados||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(e=>({id:e.id, name:e.nome, link:e.link}))
-  }));
+
+  const { data: simRows, error: errSim } = await sb.from('simulados')
+    .select('id,nome,link,ordem')
+    .eq('curso_id', CURRENT_CURSO.id).order('ordem');
+  if(errSim) console.error('erro ao carregar simulados', errSim);
+  DATA.simulados = (simRows||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(e=>({id:e.id, name:e.nome, link:e.link}));
 
   document.getElementById('loadingText').textContent = 'Carregando cronograma...';
   const { data: diasRows, error: errDias } = await sb.from('dias_cronograma')
@@ -1067,7 +1202,7 @@ async function iniciar(){
     .eq('curso_id', CURRENT_CURSO.id).order('ordem');
   if(errDias) console.error('erro ao carregar cronograma', errDias);
   DATA.cronograma = (diasRows||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(d=>({
-    day: d.dia, week: d.semana, revisao_de: d.revisao_de,
+    id: d.id, day: d.dia, week: d.semana, revisao_de: d.revisao_de,
     items: (d.itens_cronograma||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(it=>({id:it.id, code:it.code, disc:it.disciplina}))
   }));
 
@@ -1077,20 +1212,24 @@ async function iniciar(){
   const itemKeyById = {};
   DATA.cronograma.forEach(d=> d.items.forEach((it,idx)=>{ itemKeyById[it.id] = d.day+'#'+idx; }));
   const examKeyById = {};
-  DATA.simulados.forEach((s,si)=> s.exams.forEach((e,ei)=>{ examKeyById[e.id] = si+'-'+ei; }));
+  DATA.simulados.forEach((e,ei)=>{ examKeyById[e.id] = String(ei); });
+  const dayKeyById = {};
+  DATA.cronograma.forEach(d=>{ if(d.id) dayKeyById[d.id] = d.day; });
 
-  const [pt, pi, ps, pr, cfg] = await Promise.all([
+  const [pt, pi, ps, pr, cfg, md] = await Promise.all([
     sb.from('progresso_topicos').select('*').eq('aluno_id', CURRENT_USER.id),
     sb.from('progresso_itens').select('*').eq('aluno_id', CURRENT_USER.id),
     sb.from('progresso_simulados').select('*').eq('aluno_id', CURRENT_USER.id),
     sb.from('progresso_revisoes').select('*').eq('aluno_id', CURRENT_USER.id),
     sb.from('config_aluno').select('*').eq('aluno_id', CURRENT_USER.id).eq('curso_id', CURRENT_CURSO.id).maybeSingle(),
+    sb.from('metas_dia').select('*').eq('aluno_id', CURRENT_USER.id),
   ]);
 
   (pt.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.topics[k] = {acertos:row.acertos||0, feitas:row.feitas||0}; });
   (pi.data||[]).forEach(row=>{ const k = itemKeyById[row.item_id]; if(k) state.dayItems[k] = !!row.concluido; });
   (ps.data||[]).forEach(row=>{ const k = examKeyById[row.simulado_id]; if(k) state.exams[k] = {acertos:row.acertos||0, erros:row.erros||0}; });
-  (pr.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.revisoes[k] = {r1:row.r1||0, r2:row.r2||0, r3:row.r3||0, obs:row.obs||''}; });
+  (pr.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.revisoes[k] = {r1:row.r1||0, r2:row.r2||0, r3:row.r3||0, obs:row.obs||'', data_revisao: row.data_revisao||''}; });
+  (md.data||[]).forEach(row=>{ const day = dayKeyById[row.dia_id]; if(day) state.metas[day] = row.meta||''; });
 
   if(cfg.data){
     state.config.startDate = cfg.data.data_inicio || '';
@@ -1102,6 +1241,7 @@ async function iniciar(){
 
   document.getElementById('loadingScreen').classList.add('hidden');
   document.getElementById('appRoot').classList.remove('hidden');
+  showView('dashboard');
   renderHeader();
   renderDashboard();
 }
