@@ -45,7 +45,7 @@
   }
   a{color:var(--navy);}
   button{font-family:inherit;cursor:pointer;}
-  input,textarea{font-family:inherit;}
+  input,textarea,select{font-family:inherit;}
 
   /* ===== layout ===== */
   .app{display:flex; min-height:100vh;}
@@ -202,12 +202,22 @@
   .items{display:flex; flex-direction:column; gap:2px;}
   .item-row{display:flex; align-items:center; gap:10px; padding:6px 4px; border-radius:8px; cursor:pointer;}
   .item-row:hover{background:var(--cream);}
-  .item-row input{width:17px; height:17px; accent-color:var(--navy); flex-shrink:0;}
+  .item-row input[type="checkbox"]{width:17px; height:17px; accent-color:var(--navy); flex-shrink:0; cursor:pointer;}
   .item-row.done .item-name{color:var(--muted); text-decoration:line-through;}
   .item-name{font-size:13.5px; color:var(--ink);}
   .meta-row{margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
-  .meta-label{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
-  .meta-options{display:flex; flex-wrap:wrap; gap:4px 16px;}
+  .meta-select{
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:4px 8px;
+    font-size:13px;
+    color:var(--navy-deeper);
+    background:#fff;
+    cursor:pointer;
+    font-weight:600;
+    max-width:100%;
+  }
+  .meta-select:focus{outline:2px solid var(--gold); border-color:var(--gold);}
   .item-name.is-sim{color:var(--navy); font-weight:700;}
   .item-name.is-rev{color:#6A4A9C; font-weight:700;}
   .week-heading{
@@ -797,7 +807,8 @@ function renderCronograma(filter, onlyPending){
       const isFullyDone = itemsCount>0 && doneCount===itemsCount;
       if(onlyPending && isFullyDone) return false;
       if(!filter) return true;
-      const hay = (d.day+' '+d.items.map(it=>it.disc+' '+(it.code||'')).join(' ')).toLowerCase();
+      const metaObj = metaState(d.day);
+      const hay = (d.day+' '+d.items.map(it=>it.disc+' '+(it.code||'')).join(' ')+' '+(metaObj.disciplina||'')).toLowerCase();
       return hay.includes(filter);
     });
     if(days.length===0) return;
@@ -819,22 +830,34 @@ function renderCronograma(filter, onlyPending){
           <span class="${nameCls}">${escapeHtml(it.disc||'')}</span>
         </label>`;
       }).join('');
+
+      const m = metaState(d.day);
+      const optionsDisc = DATA.disciplinas.map(s => {
+        const discName = s.header.split(' - ')[1] || s.header;
+        const selected = (m.disciplina === discName) ? 'selected' : '';
+        return `<option value="${escapeHtml(discName)}" ${selected}>${escapeHtml(discName)}</option>`;
+      }).join('');
+
+      const metaRowHtml = `<div class="item-row ${m.done?'done':''}">
+        <input type="checkbox" ${m.done?'checked':''} onchange="toggleMetaDone('${d.day}')">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; flex:1;">
+          <span class="item-name" style="font-weight:700;">🎯 Meta do dia:</span>
+          <select class="meta-select" onchange="setMetaDisciplina('${d.day}', this.value)">
+            <option value="">-- Selecione uma disciplina --</option>
+            ${optionsDisc}
+          </select>
+        </div>
+      </div>`;
+
       html += `<div class="day-card ${isFullyDone?'done':''}">
         <div class="dhead">
           <span class="dname">${d.day}</span>
           ${d.revisao_de?`<span class="badge neutral">revisão de ${escapeHtml(d.revisao_de)}</span>`:''}
           <span class="day-count">${itemsCount? doneCount+'/'+itemsCount : 'livre'}</span>
         </div>
-        <div class="items">${rows || '<div class="item-row" style="cursor:default;"><span class="item-name" style="color:var(--muted);">Dia livre, sem itens no plano.</span></div>'}</div>
-        <div class="meta-row">
-          <div class="meta-label">🎯 Meta do dia (opcional)</div>
-          <div class="meta-options">${METAS_OPCOES.map(op=>{
-            const checked = metaState(d.day).includes(op);
-            return `<label class="item-row" style="padding:3px 4px;">
-              <input type="checkbox" ${checked?'checked':''} onchange="toggleMetaOpcao('${d.day}','${op}')">
-              <span class="item-name" style="font-size:12.5px;">${op}</span>
-            </label>`;
-          }).join('')}</div>
+        <div class="items">
+          ${rows || '<div class="item-row" style="cursor:default;"><span class="item-name" style="color:var(--muted);">Dia livre, sem itens no plano.</span></div>'}
+          ${metaRowHtml}
         </div>
       </div>`;
     });
@@ -859,25 +882,31 @@ function toggleDayItem(day, idx){
 }
 let cronoPendingOnly = false;
 
-const METAS_OPCOES = ['Fazer questões', 'Revisar teoria', 'Assistir aula', 'Fazer resumo', 'Fazer simulado', 'Ler a lei seca'];
-
 function metaState(day){
-  if(!Array.isArray(state.metas[day])) state.metas[day] = [];
+  if(!state.metas[day] || typeof state.metas[day] !== 'object'){
+    state.metas[day] = { disciplina: '', done: false };
+  }
   return state.metas[day];
 }
 function salvarMeta(day){
-  const lista = metaState(day);
+  const m = metaState(day);
   const d = getCronograma().find(x=>x.day===day);
   if(d && d.id && CURRENT_USER){
+    const payloadStr = JSON.stringify({ disciplina: m.disciplina || '', done: !!m.done });
     sb.from('metas_dia').upsert({
-      aluno_id: CURRENT_USER.id, dia_id: d.id, meta: lista.join(', ')
+      aluno_id: CURRENT_USER.id, dia_id: d.id, meta: payloadStr
     }, { onConflict: 'aluno_id,dia_id' }).then(({error})=>{ if(error) console.error('erro ao salvar meta do dia', error); });
   }
 }
-function toggleMetaOpcao(day, opcao){
-  const lista = metaState(day);
-  const idx = lista.indexOf(opcao);
-  if(idx>=0) lista.splice(idx,1); else lista.push(opcao);
+function toggleMetaDone(day){
+  const m = metaState(day);
+  m.done = !m.done;
+  salvarMeta(day);
+  renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly);
+}
+function setMetaDisciplina(day, disc){
+  const m = metaState(day);
+  m.disciplina = disc;
   salvarMeta(day);
 }
 
@@ -1241,7 +1270,16 @@ async function carregarCurso(curso){
   (pi.data||[]).forEach(row=>{ const k = itemKeyById[row.item_id]; if(k) state.dayItems[k] = !!row.concluido; });
   (ps.data||[]).forEach(row=>{ const k = examKeyById[row.simulado_id]; if(k) state.exams[k] = {acertos:row.acertos||0, erros:row.erros||0}; });
   (pr.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.revisoes[k] = {r1:row.r1||0, r2:row.r2||0, r3:row.r3||0, obs:row.obs||'', data_revisao: row.data_revisao||''}; });
-  (md.data||[]).forEach(row=>{ const day = dayKeyById[row.dia_id]; if(day) state.metas[day] = (row.meta||'').split(',').map(s=>s.trim()).filter(Boolean); });
+  (md.data||[]).forEach(row=>{
+    const day = dayKeyById[row.dia_id];
+    if(day){
+      try {
+        state.metas[day] = JSON.parse(row.meta);
+      } catch(e) {
+        state.metas[day] = { disciplina: row.meta || '', done: false };
+      }
+    }
+  });
 
   if(cfg.data){
     state.config.startDate = cfg.data.data_inicio || '';
