@@ -205,11 +205,9 @@
   .item-row input{width:17px; height:17px; accent-color:var(--navy); flex-shrink:0;}
   .item-row.done .item-name{color:var(--muted); text-decoration:line-through;}
   .item-name{font-size:13.5px; color:var(--ink);}
-  .meta-row{display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
-  .meta-ic{font-size:13px; flex-shrink:0;}
-  .meta-input{flex:1; border:none; background:transparent; font-size:12.5px; color:var(--ink); padding:4px 0;}
-  .meta-input::placeholder{color:var(--muted);}
-  .meta-input:focus{outline:none; border-bottom:1px solid var(--gold);}
+  .meta-row{margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);}
+  .meta-label{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;}
+  .meta-options{display:flex; flex-wrap:wrap; gap:4px 16px;}
   .item-name.is-sim{color:var(--navy); font-weight:700;}
   .item-name.is-rev{color:#6A4A9C; font-weight:700;}
   .week-heading{
@@ -829,8 +827,14 @@ function renderCronograma(filter, onlyPending){
         </div>
         <div class="items">${rows || '<div class="item-row" style="cursor:default;"><span class="item-name" style="color:var(--muted);">Dia livre, sem itens no plano.</span></div>'}</div>
         <div class="meta-row">
-          <span class="meta-ic">🎯</span>
-          <input type="text" class="meta-input" placeholder="Sua meta pra esse dia (opcional)" value="${escapeHtml(metaState(d.day))}" onchange="updateMeta('${d.day}',this.value)">
+          <div class="meta-label">🎯 Meta do dia (opcional)</div>
+          <div class="meta-options">${METAS_OPCOES.map(op=>{
+            const checked = metaState(d.day).includes(op);
+            return `<label class="item-row" style="padding:3px 4px;">
+              <input type="checkbox" ${checked?'checked':''} onchange="toggleMetaOpcao('${d.day}','${op}')">
+              <span class="item-name" style="font-size:12.5px;">${op}</span>
+            </label>`;
+          }).join('')}</div>
         </div>
       </div>`;
     });
@@ -855,18 +859,26 @@ function toggleDayItem(day, idx){
 }
 let cronoPendingOnly = false;
 
+const METAS_OPCOES = ['Fazer questões', 'Revisar teoria', 'Assistir aula', 'Fazer resumo', 'Fazer simulado', 'Ler a lei seca'];
+
 function metaState(day){
-  if(state.metas[day]===undefined) state.metas[day] = '';
+  if(!Array.isArray(state.metas[day])) state.metas[day] = [];
   return state.metas[day];
 }
-function updateMeta(day, val){
-  state.metas[day] = val;
+function salvarMeta(day){
+  const lista = metaState(day);
   const d = getCronograma().find(x=>x.day===day);
   if(d && d.id && CURRENT_USER){
     sb.from('metas_dia').upsert({
-      aluno_id: CURRENT_USER.id, dia_id: d.id, meta: val
+      aluno_id: CURRENT_USER.id, dia_id: d.id, meta: lista.join(', ')
     }, { onConflict: 'aluno_id,dia_id' }).then(({error})=>{ if(error) console.error('erro ao salvar meta do dia', error); });
   }
+}
+function toggleMetaOpcao(day, opcao){
+  const lista = metaState(day);
+  const idx = lista.indexOf(opcao);
+  if(idx>=0) lista.splice(idx,1); else lista.push(opcao);
+  salvarMeta(day);
 }
 
 /* ===== DISCIPLINAS ===== */
@@ -1229,7 +1241,7 @@ async function carregarCurso(curso){
   (pi.data||[]).forEach(row=>{ const k = itemKeyById[row.item_id]; if(k) state.dayItems[k] = !!row.concluido; });
   (ps.data||[]).forEach(row=>{ const k = examKeyById[row.simulado_id]; if(k) state.exams[k] = {acertos:row.acertos||0, erros:row.erros||0}; });
   (pr.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.revisoes[k] = {r1:row.r1||0, r2:row.r2||0, r3:row.r3||0, obs:row.obs||'', data_revisao: row.data_revisao||''}; });
-  (md.data||[]).forEach(row=>{ const day = dayKeyById[row.dia_id]; if(day) state.metas[day] = row.meta||''; });
+  (md.data||[]).forEach(row=>{ const day = dayKeyById[row.dia_id]; if(day) state.metas[day] = (row.meta||'').split(',').map(s=>s.trim()).filter(Boolean); });
 
   if(cfg.data){
     state.config.startDate = cfg.data.data_inicio || '';
