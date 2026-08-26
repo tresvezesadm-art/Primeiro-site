@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root{
     --navy:#1A2F5A;
@@ -291,6 +292,48 @@
     *{animation:none !important; transition:none !important;}
   }
   :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+
+  /* ===== relógio flutuante (pomodoro/timer/livre) ===== */
+  .timer-fab{
+    position:fixed; right:22px; bottom:22px; z-index:50;
+    width:56px; height:56px; border-radius:50%; border:none;
+    background:var(--navy-dark); color:var(--gold-light); font-size:22px;
+    box-shadow:0 8px 22px rgba(13,27,62,.35); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .timer-fab:hover{background:var(--navy-deeper);}
+  .timer-fab .fab-time{position:absolute; bottom:-6px; right:-4px; background:var(--gold); color:var(--navy-deeper); font-size:9.5px; font-weight:800; padding:2px 5px; border-radius:999px; font-family:'Outfit',sans-serif;}
+  .timer-card{
+    position:fixed; right:22px; bottom:88px; z-index:50; width:290px;
+    background:var(--navy-dark); color:#fff; padding:20px; border-radius:18px;
+    box-shadow:0 14px 40px rgba(13,27,62,.4); font-family:'Plus Jakarta Sans',sans-serif;
+  }
+  .timer-tabs{display:flex; gap:4px; background:rgba(255,255,255,.08); padding:4px; border-radius:11px; margin-bottom:14px; flex-wrap:wrap;}
+  .timer-tabs button{flex:1; min-width:52px; padding:6px 4px; border:none; border-radius:8px; background:transparent; color:rgba(255,255,255,.55); font-size:10.5px; font-weight:700; cursor:pointer;}
+  .timer-tabs button.active{background:var(--gold); color:var(--navy-deeper);}
+  .timer-disc-select{width:100%; padding:8px 10px; border-radius:9px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff; font-size:12.5px; margin-bottom:14px;}
+  .timer-disc-select option{color:#000;}
+  .timer-display{font-family:'Outfit',sans-serif; font-size:44px; font-weight:800; letter-spacing:1px; text-align:center; margin:6px 0 14px;}
+  .timer-custom{display:none; gap:8px; justify-content:center; align-items:center; margin-bottom:14px;}
+  .timer-custom input{width:64px; padding:7px; border-radius:8px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.06); color:#fff; text-align:center; font-weight:700;}
+  .timer-custom span{font-size:12px; color:rgba(255,255,255,.6);}
+  .timer-actions{display:flex; gap:8px;}
+  .timer-actions .btn-start{flex:2; padding:11px; border-radius:10px; border:none; background:var(--green); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer;}
+  .timer-actions .btn-start.running{background:var(--gold); color:var(--navy-deeper);}
+  .timer-actions .btn-reset{flex:1; padding:11px; border-radius:10px; border:none; background:rgba(255,255,255,.12); color:#fff; font-weight:700; font-size:13.5px; cursor:pointer;}
+  .timer-close{position:absolute; top:10px; right:12px; background:transparent; border:none; color:rgba(255,255,255,.5); font-size:15px; cursor:pointer;}
+
+  /* ===== tempo de estudo (card) ===== */
+  .tempo-tabs{display:inline-flex; background:var(--cream); padding:3px; border-radius:10px; gap:2px;}
+  .tempo-tabs button{border:none; background:transparent; color:var(--muted); padding:6px 12px; border-radius:7px; font-size:11px; font-weight:800; cursor:pointer;}
+  .tempo-tabs button.active{background:var(--navy-dark); color:#fff;}
+  .tempo-total{font-family:'Outfit',sans-serif; font-size:26px; font-weight:800; color:var(--navy-deeper); text-align:center; margin:14px 0 20px;}
+  .tempo-legenda{display:flex; flex-direction:column; gap:10px;}
+  .tempo-legenda-row{display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--ink);}
+  .tempo-legenda-dot{width:12px; height:12px; border-radius:3px; flex-shrink:0; border:1px solid rgba(0,0,0,.08);}
+  .tempo-legenda-nome{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;}
+  .tempo-legenda-linha{flex:1; border-bottom:1px dashed var(--border); margin:0 4px;}
+  .tempo-legenda-valor{font-weight:800; color:var(--navy-deeper); flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -376,6 +419,27 @@
 
         <div class="section-title"><h2>Trilha do cronograma</h2><span class="hint" id="trailHint"></span></div>
         <div class="card"><div class="trail" id="trail"></div></div>
+
+        <div class="section-title">
+          <h2>Tempo de estudo</h2>
+          <div class="tempo-tabs" id="tempoTabs">
+            <button data-periodo="hoje" class="active">HOJE</button>
+            <button data-periodo="semana">SEMANA</button>
+            <button data-periodo="mes">MÊS</button>
+            <button data-periodo="total">TOTAL</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="grid cols-2" style="align-items:center;">
+            <div style="position:relative; width:100%; max-width:230px; margin:0 auto;">
+              <canvas id="graficoTempoEstudo" width="230" height="230"></canvas>
+            </div>
+            <div>
+              <div class="tempo-total" id="tempoTotalTexto">0min</div>
+              <div class="tempo-legenda" id="tempoLegenda"></div>
+            </div>
+          </div>
+        </div>
 
         <div class="grid cols-2" style="margin-top:26px; align-items:start;">
           <div class="card">
@@ -467,6 +531,34 @@
 
     </div>
   </div>
+
+  <!-- RELÓGIO FLUTUANTE (Pomodoro / Timer / Livre) -->
+  <button class="timer-fab" id="timerFab" onclick="toggleTimerCard()">
+    ⏱<span class="fab-time hidden" id="fabTime">25:00</span>
+  </button>
+  <div class="timer-card hidden" id="timerCard">
+    <button class="timer-close" onclick="toggleTimerCard()">✕</button>
+    <select class="timer-disc-select" id="timerDisciplina" onchange="onTrocarDisciplinaTimer()">
+      <option value="">Geral (sem disciplina)</option>
+    </select>
+    <div class="timer-tabs">
+      <button data-modo="pomodoro" class="active" onclick="setTimerMode('pomodoro')">Foco 25m</button>
+      <button data-modo="shortBreak" onclick="setTimerMode('shortBreak')">Pausa 5m</button>
+      <button data-modo="longBreak" onclick="setTimerMode('longBreak')">Pausa 15m</button>
+      <button data-modo="timer" onclick="setTimerMode('timer')">Timer</button>
+      <button data-modo="stopwatch" onclick="setTimerMode('stopwatch')">Livre</button>
+    </div>
+    <div class="timer-custom" id="timerCustomInput">
+      <input type="number" id="timerMinutosInput" value="10" min="1" max="180">
+      <span>minutos</span>
+      <button class="btn gold" style="padding:7px 10px; font-size:11px;" onclick="applyCustomTimer()">Definir</button>
+    </div>
+    <div class="timer-display" id="timerDisplay">25:00</div>
+    <div class="timer-actions">
+      <button class="btn-start" id="btnTimerToggle" onclick="toggleTimer()">Iniciar</button>
+      <button class="btn-reset" onclick="resetTimer()">Zerar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -479,6 +571,225 @@ let DATA = {disciplinas:[], cronograma:[], simulados:[]};
 let CURRENT_USER = null;
 let CURRENT_CURSO = null;
 let state = {topics:{}, dayItems:{}, revisoes:{}, exams:{}, config:{examDate:'', startDate:''}, prioridades:{}, customCronograma:null, metas:{}};
+
+/* ===== relógio flutuante: pomodoro / timer / cronômetro livre ===== */
+let timerMode = 'pomodoro';
+let timerSecondsLeft = 1500;
+let timerInterval = null;
+let timerRunning = false;
+let timerPendingSeconds = 0; // segundos ainda não registrados como sessão de estudo
+let timerDisciplinaId = null;
+
+function tocarAlertaSonoro(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (freq, delay, dur)=>{
+      setTimeout(()=>{
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + dur);
+        osc.stop(ctx.currentTime + dur);
+      }, delay);
+    };
+    beep(880, 0, 0.3); beep(880, 400, 0.3); beep(1046, 800, 0.6);
+  }catch(e){}
+}
+function formatarTempoTimer(sec){
+  const m = Math.floor(sec/60).toString().padStart(2,'0');
+  const s = (sec%60).toString().padStart(2,'0');
+  return `${m}:${s}`;
+}
+function toggleTimerCard(){
+  document.getElementById('timerCard').classList.toggle('hidden');
+}
+function popularSeletorDisciplinaTimer(){
+  const sel = document.getElementById('timerDisciplina');
+  if(!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Geral (sem disciplina)</option>' + DATA.disciplinas.map((s,i)=>
+    `<option value="${i}">${escapeHtml(s.header.split(' - ')[1]||s.header)}</option>`
+  ).join('');
+  sel.value = atual || '';
+}
+function onTrocarDisciplinaTimer(){
+  flushTimerPendente();
+  const sel = document.getElementById('timerDisciplina');
+  timerDisciplinaId = sel.value ? DATA.disciplinas[Number(sel.value)].id : null;
+}
+function atualizarDisplayTimer(){
+  const txt = formatarTempoTimer(timerSecondsLeft);
+  document.getElementById('timerDisplay').textContent = txt;
+  const fabTime = document.getElementById('fabTime');
+  if(timerRunning){ fabTime.textContent = txt; fabTime.classList.remove('hidden'); }
+  else{ fabTime.classList.add('hidden'); }
+}
+function setTimerMode(novoModo){
+  pauseTimer();
+  timerMode = novoModo;
+  document.querySelectorAll('.timer-tabs button').forEach(b=> b.classList.toggle('active', b.dataset.modo===timerMode));
+  document.getElementById('timerCustomInput').style.display = (timerMode==='timer') ? 'flex' : 'none';
+  if(timerMode==='pomodoro') timerSecondsLeft = 1500;
+  else if(timerMode==='shortBreak') timerSecondsLeft = 300;
+  else if(timerMode==='longBreak') timerSecondsLeft = 900;
+  else if(timerMode==='timer') timerSecondsLeft = (parseInt(document.getElementById('timerMinutosInput').value)||10) * 60;
+  else if(timerMode==='stopwatch') timerSecondsLeft = 0;
+  atualizarDisplayTimer();
+}
+function applyCustomTimer(){
+  if(timerMode!=='timer') return;
+  pauseTimer();
+  const min = parseInt(document.getElementById('timerMinutosInput').value) || 1;
+  timerSecondsLeft = min * 60;
+  atualizarDisplayTimer();
+}
+function toggleTimer(){
+  if(timerRunning) pauseTimer(); else startTimer();
+}
+function startTimer(){
+  timerRunning = true;
+  const btn = document.getElementById('btnTimerToggle');
+  btn.textContent = 'Pausar'; btn.classList.add('running');
+  timerInterval = setInterval(()=>{
+    const contaComoEstudo = (timerMode!=='shortBreak' && timerMode!=='longBreak');
+    if(timerMode==='stopwatch'){
+      timerSecondsLeft++;
+      if(contaComoEstudo) timerPendingSeconds++;
+      atualizarDisplayTimer();
+    } else {
+      if(timerSecondsLeft>0){
+        timerSecondsLeft--;
+        if(contaComoEstudo) timerPendingSeconds++;
+        atualizarDisplayTimer();
+      } else {
+        pauseTimer();
+        tocarAlertaSonoro();
+      }
+    }
+  }, 1000);
+}
+function pauseTimer(){
+  timerRunning = false;
+  clearInterval(timerInterval);
+  const btn = document.getElementById('btnTimerToggle');
+  if(btn){ btn.textContent = 'Iniciar'; btn.classList.remove('running'); }
+  atualizarDisplayTimer();
+  flushTimerPendente();
+}
+function resetTimer(){
+  flushTimerPendente();
+  setTimerMode(timerMode);
+}
+function flushTimerPendente(){
+  if(timerPendingSeconds >= 5){
+    registrarSessaoEstudo(timerPendingSeconds, timerDisciplinaId);
+  }
+  timerPendingSeconds = 0;
+}
+async function registrarSessaoEstudo(segundos, disciplinaId){
+  if(!CURRENT_USER || !CURRENT_CURSO) return;
+  const { error } = await sb.from('sessoes_estudo').insert({
+    aluno_id: CURRENT_USER.id, curso_id: CURRENT_CURSO.id,
+    disciplina_id: disciplinaId || null, duracao_segundos: Math.round(segundos)
+  });
+  if(error){ console.error('erro ao registrar sessão de estudo', error); return; }
+  await carregarSessoesEstudo();
+}
+
+/* ===== tempo de estudo: dados reais ===== */
+let SESSOES_ESTUDO = [];
+let tempoEstudoPeriodoAtual = 'hoje';
+const PALETA_GRAFICO = ['#0D1B3E','#F5C400','#1A4FB5','#28a745','#C0504D','#6A4A9C','#FFB74D','#4FC3F7','#8D6E63','#EC407A','#26A69A','#7E57C2'];
+let graficoTempoEstudo = null;
+
+async function carregarSessoesEstudo(){
+  if(!CURRENT_USER || !CURRENT_CURSO) return;
+  const { data, error } = await sb.from('sessoes_estudo')
+    .select('disciplina_id,duracao_segundos,criado_em')
+    .eq('aluno_id', CURRENT_USER.id).eq('curso_id', CURRENT_CURSO.id);
+  if(error){ console.error('erro ao carregar sessões de estudo', error); return; }
+  SESSOES_ESTUDO = data || [];
+  renderTempoEstudo(tempoEstudoPeriodoAtual);
+}
+function formatarDuracao(segundos){
+  const totalMin = Math.round(segundos/60);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  if(h<=0) return `${m}min`;
+  return `${h}h${m.toString().padStart(2,'0')}min`;
+}
+function filtrarSessoesPorPeriodo(periodo){
+  const agora = new Date();
+  const hojeInicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  return SESSOES_ESTUDO.filter(s=>{
+    const d = new Date(s.criado_em);
+    if(periodo==='hoje') return d >= hojeInicio;
+    if(periodo==='semana'){
+      const inicioSemana = new Date(hojeInicio); inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+      return d >= inicioSemana;
+    }
+    if(periodo==='mes'){
+      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+      return d >= inicioMes;
+    }
+    return true; // total
+  });
+}
+function nomeDisciplinaPorId(id){
+  if(!id) return 'Geral';
+  const d = DATA.disciplinas.find(x=>x.id===id);
+  return d ? (d.header.split(' - ')[1]||d.header) : 'Geral';
+}
+function renderTempoEstudo(periodo){
+  tempoEstudoPeriodoAtual = periodo;
+  document.querySelectorAll('#tempoTabs button').forEach(b=> b.classList.toggle('active', b.dataset.periodo===periodo));
+
+  const sessoes = filtrarSessoesPorPeriodo(periodo);
+  const porDisciplina = {};
+  let totalSegundos = 0;
+  sessoes.forEach(s=>{
+    const chave = s.disciplina_id || 'geral';
+    porDisciplina[chave] = (porDisciplina[chave]||0) + (s.duracao_segundos||0);
+    totalSegundos += (s.duracao_segundos||0);
+  });
+  const entradas = Object.entries(porDisciplina).sort((a,b)=> b[1]-a[1]);
+
+  document.getElementById('tempoTotalTexto').textContent = formatarDuracao(totalSegundos);
+
+  const canvas = document.getElementById('graficoTempoEstudo');
+  if(graficoTempoEstudo){ graficoTempoEstudo.destroy(); graficoTempoEstudo = null; }
+
+  if(entradas.length===0){
+    document.getElementById('tempoLegenda').innerHTML = `<div style="color:var(--muted); font-size:12.5px;">Nenhuma sessão de estudo registrada nesse período. Use o relógio no canto da tela pra cronometrar seus estudos.</div>`;
+    return;
+  }
+
+  const labels = entradas.map(([chave])=> chave==='geral' ? 'Geral' : nomeDisciplinaPorId(chave));
+  const valores = entradas.map(([,seg])=> seg);
+  const cores = entradas.map((_,i)=> PALETA_GRAFICO[i % PALETA_GRAFICO.length]);
+
+  graficoTempoEstudo = new Chart(canvas.getContext('2d'), {
+    type: 'pie',
+    data: { labels, datasets: [{ data: valores, backgroundColor: cores, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+  });
+
+  document.getElementById('tempoLegenda').innerHTML = entradas.map(([chave, seg], i)=>{
+    const nome = chave==='geral' ? 'Geral' : nomeDisciplinaPorId(chave);
+    return `<div class="tempo-legenda-row">
+      <span class="tempo-legenda-dot" style="background:${PALETA_GRAFICO[i % PALETA_GRAFICO.length]};"></span>
+      <span class="tempo-legenda-nome">${escapeHtml(nome)}</span>
+      <span class="tempo-legenda-linha"></span>
+      <span class="tempo-legenda-valor">${formatarDuracao(seg)}</span>
+    </div>`;
+  }).join('');
+}
+document.getElementById('tempoTabs').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-periodo]');
+  if(btn) renderTempoEstudo(btn.dataset.periodo);
+});
 
 function sair(){
   sb.auth.signOut().then(()=>{ window.location.href = LOGIN_PAGE; });
@@ -495,7 +806,6 @@ function priorityScore(subjIdx){
   return Math.max(0.5, p.peso*2 - p.conhecimento*1.5 + 4);
 }
 function weightedRoundRobinSequence(items, count){
-  // items: [{key, weight}] — sequência ponderada e intercalada (smooth weighted round robin)
   const cw = {}; items.forEach(it=> cw[it.key]=0);
   const totalWeight = items.reduce((s,it)=>s+it.weight,0) || 1;
   const seq = [];
@@ -1170,7 +1480,6 @@ async function iniciar(){
     return;
   }
 
-  // mais de um curso: tenta usar o último escolhido, senão mostra o seletor
   let lembrado = null;
   try{ lembrado = localStorage.getItem(CURSO_LEMBRADO_KEY); }catch(e){}
   const cursoLembrado = lembrado && MEUS_CURSOS.find(c=>c.id===lembrado);
@@ -1208,9 +1517,12 @@ async function carregarCurso(curso){
   CURRENT_CURSO = curso;
   try{ localStorage.setItem(CURSO_LEMBRADO_KEY, curso.id); }catch(e){}
 
-  // zera dados/estado de um curso carregado anteriormente (troca de curso)
   DATA = {disciplinas:[], cronograma:[], simulados:[]};
   state = {topics:{}, dayItems:{}, revisoes:{}, exams:{}, config:{examDate:'', startDate:''}, prioridades:{}, customCronograma:null, metas:{}};
+  pauseTimer();
+  timerPendingSeconds = 0;
+  timerDisciplinaId = null;
+  SESSOES_ESTUDO = [];
 
   const cursoBox = document.getElementById('cursoAtualBox');
   if(MEUS_CURSOS.length>1){
@@ -1289,11 +1601,15 @@ async function carregarCurso(curso){
     if(extra.personalizado){ state.customCronograma = buildPersonalizedCronograma(); }
   }
 
+  popularSeletorDisciplinaTimer();
+  setTimerMode('pomodoro');
+
   document.getElementById('loadingScreen').classList.add('hidden');
   document.getElementById('appRoot').classList.remove('hidden');
   showView('dashboard');
   renderHeader();
   renderDashboard();
+  await carregarSessoesEstudo();
 }
 iniciar();
 </script>
