@@ -872,7 +872,7 @@ function topicState(key){
   return state.topics[key];
 }
 function revState(key){
-  if(!state.revisoes[key]) state.revisoes[key] = {r1:0,r2:0,r3:0,obs:'',data_revisao:''};
+  if(!state.revisoes[key]) state.revisoes[key] = {r1:0,r2:0,r3:0,obs:'',data_revisao:'',concluida:false};
   return state.revisoes[key];
 }
 function examState(key){
@@ -934,10 +934,10 @@ function revisoesPendentes(){
   DATA.disciplinas.forEach((s,si)=> s.topics.forEach((t,ti)=>{
     const key = si+'-'+ti;
     const st = state.revisoes[key];
-    if(st && st.data_revisao){
+    if(st && st.data_revisao && !st.concluida){
       const diff = daysBetween(hoje, new Date(st.data_revisao));
       if(diff<=2){
-        lista.push({disciplina: s.header.split(' - ')[1]||s.header, topico: t.text, data: st.data_revisao, diff});
+        lista.push({si, ti, disciplina: s.header.split(' - ')[1]||s.header, topico: t.text, data: st.data_revisao, diff});
       }
     }
   }));
@@ -945,6 +945,11 @@ function revisoesPendentes(){
   return lista;
 }
 
+function marcarRevisaoConcluida(si, ti){
+  const key = si+'-'+ti;
+  updateRev(key, 'concluida', true);
+  renderDashboard();
+}
 function renderHeader(){
   const chips = document.getElementById('headerChips');
   const ov = overallTopicStats();
@@ -979,10 +984,11 @@ function renderDashboard(){
     document.getElementById('revPendList').innerHTML = revPend.map(r=>{
       const label = r.diff<0 ? `atrasada há ${Math.abs(r.diff)} dia${Math.abs(r.diff)>1?'s':''}` : (r.diff===0 ? 'hoje' : `em ${r.diff} dia${r.diff>1?'s':''}`);
       const cls = r.diff<0 ? 'bad' : (r.diff<=1 ? 'bad' : 'neutral');
-      return `<div class="bar-row" style="grid-template-columns:1fr auto;">
+      return `<label class="item-row" style="grid-template-columns:auto 1fr auto; display:grid; align-items:center; gap:10px; cursor:pointer;">
+        <input type="checkbox" onchange="marcarRevisaoConcluida(${r.si},${r.ti})" title="Marcar revisão como concluída">
         <div class="name">${escapeHtml(r.topico)} <span style="color:var(--muted); font-weight:400;">· ${escapeHtml(r.disciplina)}</span></div>
         <span class="badge ${cls}">${label}</span>
-      </div>`;
+      </label>`;
     }).join('');
   }
 
@@ -1354,6 +1360,7 @@ function renderRevisoes(filter){
         <td style="width:72px;"><input class="num-input" type="number" min="0" max="100" value="${st.r3}" onchange="updateRev('${key}','r3',this.value)"> %</td>
         <td style="width:150px;"><input class="date-input" ${avisoCls} type="date" value="${st.data_revisao||''}" onchange="updateRev('${key}','data_revisao',this.value)"></td>
         <td style="min-width:140px;"><input class="txt-input" type="text" value="${escapeHtml(st.obs||'')}" placeholder="Observações" onchange="updateRev('${key}','obs',this.value)"></td>
+        <td style="width:60px; text-align:center;"><input type="checkbox" ${st.concluida?'checked':''} title="Marcar como concluída" style="width:17px; height:17px; accent-color:var(--navy); cursor:pointer;" onchange="updateRev('${key}','concluida',this.checked)"></td>
       </tr>`;
     }).join('');
     return `<div class="accordion" data-subj="${si}">
@@ -1363,7 +1370,7 @@ function renderRevisoes(filter){
         <span class="chev">›</span>
       </button>
       <div class="acc-body">
-        <table><thead><tr><th>Tópico</th><th>Revisão 1</th><th>Revisão 2</th><th>Revisão 3</th><th>Próxima revisão</th><th>Obs.</th></tr></thead><tbody>${rows}</tbody></table>
+        <table><thead><tr><th>Tópico</th><th>Revisão 1</th><th>Revisão 2</th><th>Revisão 3</th><th>Próxima revisão</th><th>Obs.</th><th>Feita</th></tr></thead><tbody>${rows}</tbody></table>
       </div>
     </div>`;
   }).join('');
@@ -1371,14 +1378,22 @@ function renderRevisoes(filter){
 }
 function updateRev(key, field, val){
   const st = revState(key);
-  if(field==='obs' || field==='data_revisao') st[field] = val;
-  else st[field] = Math.max(0, Math.min(100, Number(val)||0));
+  if(field==='obs'){
+    st.obs = val;
+  } else if(field==='data_revisao'){
+    st.data_revisao = val;
+    if(val) st.concluida = false; // nova data marcada = novo ciclo de revisão, não concluído ainda
+  } else if(field==='concluida'){
+    st.concluida = !!val;
+  } else {
+    st[field] = Math.max(0, Math.min(100, Number(val)||0));
+  }
   const [si, ti] = key.split('-').map(Number);
   const topico = DATA.disciplinas[si] && DATA.disciplinas[si].topics[ti];
   if(topico && topico.id && CURRENT_USER){
     sb.from('progresso_revisoes').upsert({
       aluno_id: CURRENT_USER.id, topico_id: topico.id, r1: st.r1, r2: st.r2, r3: st.r3, obs: st.obs,
-      data_revisao: st.data_revisao || null
+      data_revisao: st.data_revisao || null, concluida: !!st.concluida
     }, { onConflict: 'aluno_id,topico_id' }).then(({error})=>{ if(error) console.error('erro ao salvar revisão', error); });
   }
   renderHeader();
@@ -1581,7 +1596,7 @@ async function carregarCurso(curso){
   (pt.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.topics[k] = {acertos:row.acertos||0, feitas:row.feitas||0}; });
   (pi.data||[]).forEach(row=>{ const k = itemKeyById[row.item_id]; if(k) state.dayItems[k] = !!row.concluido; });
   (ps.data||[]).forEach(row=>{ const k = examKeyById[row.simulado_id]; if(k) state.exams[k] = {acertos:row.acertos||0, erros:row.erros||0}; });
-  (pr.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.revisoes[k] = {r1:row.r1||0, r2:row.r2||0, r3:row.r3||0, obs:row.obs||'', data_revisao: row.data_revisao||''}; });
+  (pr.data||[]).forEach(row=>{ const k = topicKeyById[row.topico_id]; if(k) state.revisoes[k] = {r1:row.r1||0, r2:row.r2||0, r3:row.r3||0, obs:row.obs||'', data_revisao: row.data_revisao||'', concluida: !!row.concluida}; });
   (md.data||[]).forEach(row=>{
     const day = dayKeyById[row.dia_id];
     if(day){
