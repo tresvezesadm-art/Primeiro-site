@@ -579,6 +579,9 @@ let timerInterval = null;
 let timerRunning = false;
 let timerPendingSeconds = 0; // segundos ainda não registrados como sessão de estudo
 let timerDisciplinaId = null;
+let timerStartedAt = null;   // Date.now() de quando o timer atual começou a rodar
+let timerBaseValue = 0;      // valor de referência (segundos) no momento em que começou a rodar
+let timerPendingBase = 0;    // timerPendingSeconds no momento em que começou a rodar
 
 function tocarAlertaSonoro(){
   try{
@@ -648,36 +651,72 @@ function applyCustomTimer(){
 function toggleTimer(){
   if(timerRunning) pauseTimer(); else startTimer();
 }
+function contaComoEstudoAgora(){
+  return timerMode!=='shortBreak' && timerMode!=='longBreak';
+}
+// Recalcula o timer com base no relógio real (Date.now()), não em "quantos tiques passaram".
+// Isso é o que garante que o tempo continue certo mesmo se a aba ficar em segundo plano
+// e o navegador atrasar/pausar o setInterval. Retorna true se o tempo acabou (modos com contagem regressiva).
+function finalizarTick(){
+  if(!timerRunning || timerStartedAt===null) return false;
+  const elapsedReal = (Date.now() - timerStartedAt) / 1000;
+  const contaEstudo = contaComoEstudoAgora();
+  if(timerMode==='stopwatch'){
+    timerSecondsLeft = Math.floor(timerBaseValue + elapsedReal);
+    if(contaEstudo) timerPendingSeconds = timerPendingBase + Math.floor(elapsedReal);
+    atualizarDisplayTimer();
+    return false;
+  }
+  const restante = timerBaseValue - elapsedReal;
+  if(restante > 0){
+    timerSecondsLeft = Math.ceil(restante);
+    if(contaEstudo) timerPendingSeconds = timerPendingBase + Math.floor(elapsedReal);
+    atualizarDisplayTimer();
+    return false;
+  }
+  timerSecondsLeft = 0;
+  if(contaEstudo) timerPendingSeconds = timerPendingBase + timerBaseValue;
+  atualizarDisplayTimer();
+  return true;
+}
+function pararTimerInterno(){
+  timerRunning = false;
+  clearInterval(timerInterval);
+  timerInterval = null;
+  const btn = document.getElementById('btnTimerToggle');
+  if(btn){ btn.textContent = 'Iniciar'; btn.classList.remove('running'); }
+  flushTimerPendente();
+}
 function startTimer(){
   timerRunning = true;
+  timerStartedAt = Date.now();
+  timerBaseValue = timerSecondsLeft;
+  timerPendingBase = timerPendingSeconds;
   const btn = document.getElementById('btnTimerToggle');
   btn.textContent = 'Pausar'; btn.classList.add('running');
   timerInterval = setInterval(()=>{
-    const contaComoEstudo = (timerMode!=='shortBreak' && timerMode!=='longBreak');
-    if(timerMode==='stopwatch'){
-      timerSecondsLeft++;
-      if(contaComoEstudo) timerPendingSeconds++;
-      atualizarDisplayTimer();
-    } else {
-      if(timerSecondsLeft>0){
-        timerSecondsLeft--;
-        if(contaComoEstudo) timerPendingSeconds++;
-        atualizarDisplayTimer();
-      } else {
-        pauseTimer();
-        tocarAlertaSonoro();
-      }
+    const terminou = finalizarTick();
+    if(terminou){
+      pararTimerInterno();
+      tocarAlertaSonoro();
     }
   }, 1000);
 }
 function pauseTimer(){
-  timerRunning = false;
-  clearInterval(timerInterval);
-  const btn = document.getElementById('btnTimerToggle');
-  if(btn){ btn.textContent = 'Iniciar'; btn.classList.remove('running'); }
-  atualizarDisplayTimer();
-  flushTimerPendente();
+  if(timerRunning) finalizarTick();
+  pararTimerInterno();
 }
+// Quando o aluno volta pra essa aba (depois de estudar em outro site, por exemplo),
+// recalcula na hora com base no tempo real passado, em vez de esperar o próximo tique.
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && timerRunning){
+    const terminou = finalizarTick();
+    if(terminou){
+      pararTimerInterno();
+      tocarAlertaSonoro();
+    }
+  }
+});
 function resetTimer(){
   flushTimerPendente();
   setTimerMode(timerMode);
