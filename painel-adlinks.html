@@ -179,6 +179,9 @@
   .badge.good{background:var(--green-bg); color:var(--green);}
   .badge.bad{background:var(--red-bg); color:var(--red);}
   .badge.neutral{background:var(--blue-tag-bg); color:var(--blue-tag);}
+  .badge.rel-alta{background:var(--red-bg); color:var(--red);}
+  .badge.rel-media{background:var(--gold-soft); color:#8a6d1f;}
+  .badge.rel-baixa{background:var(--border); color:var(--muted);}
 
   .accordion{border:1px solid var(--border); border-radius:var(--radius); margin-bottom:14px; overflow:hidden; background:#fff;}
   .accordion .acc-head{
@@ -474,6 +477,36 @@
             </div>
           </div>
         </div>
+
+        <div class="accordion" id="simuladorHorasAccordion">
+          <button class="acc-head" onclick="this.parentElement.classList.toggle('open')">
+            <div class="htxt"><h3>Simulador de horas de estudo</h3></div>
+            <span class="acc-count">quantas horas você tem por dia?</span>
+            <span class="chev">›</span>
+          </button>
+          <div class="acc-body">
+            <p style="font-size:12.5px; color:var(--muted); margin:0 0 14px;">
+              Informe quanto tempo você tem disponível e veja como ficaria a divisão entre as disciplinas, usando os mesmos pesos do "Personalizar meu cronograma" acima. É só uma prévia, não altera o cronograma de verdade.
+            </p>
+            <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+              <div>
+                <label style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; display:block; margin-bottom:5px;">Horas/dia (seg-sex)</label>
+                <input type="number" id="simHorasSemana" class="num-input" style="width:72px;" min="0" step="0.5" value="2" oninput="renderSimuladorHoras()">
+              </div>
+              <div>
+                <label style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; display:block; margin-bottom:5px;">Horas/dia (fim de semana)</label>
+                <input type="number" id="simHorasFds" class="num-input" style="width:72px;" min="0" step="0.5" value="4" oninput="renderSimuladorHoras()">
+              </div>
+              <div>
+                <label style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; display:block; margin-bottom:5px;">Duração do bloco (min)</label>
+                <input type="number" id="simDuracaoBloco" class="num-input" style="width:72px;" min="10" step="5" value="50" oninput="renderSimuladorHoras()">
+              </div>
+            </div>
+            <div id="simuladorResumo" style="font-size:13.5px; font-weight:700; color:var(--navy-deeper); margin-bottom:14px;"></div>
+            <div id="simuladorLista"></div>
+          </div>
+        </div>
+
         <div class="toolbar">
           <input class="search-input" id="cronoSearch" placeholder="Buscar disciplina ou dia (ex.: D12, Direito Administrativo)...">
           <button class="btn ghost" id="cronoOnlyPending">Só pendentes</button>
@@ -740,7 +773,7 @@ async function registrarSessaoEstudo(segundos, disciplinaId){
 /* ===== tempo de estudo: dados reais ===== */
 let SESSOES_ESTUDO = [];
 let tempoEstudoPeriodoAtual = 'hoje';
-const PALETA_GRAFICO = ['#0D1B3E','#F5C400','#1A4FB5','#28a745','#C0504D','#6A4A9C','#FFB74D','#4FC3F7','#8D6E63','#EC407A','#26A69A','#7E57C2'];
+const PALETA_GRAFICO = ['#0D1B3E','#28a745','#6A4A9C','#C0504D','#FFB74D','#4FC3F7','#8D6E63','#EC407A','#26A69A','#7E57C2','#5C6BC0','#FF7043'];
 let graficoTempoEstudo = null;
 
 async function carregarSessoesEstudo(){
@@ -781,6 +814,23 @@ function nomeDisciplinaPorId(id){
   const d = DATA.disciplinas.find(x=>x.id===id);
   return d ? (d.header.split(' - ')[1]||d.header) : 'Geral';
 }
+const COR_GERAL = '#9AA5B8';
+const CORES_DISCIPLINA_FIXAS = {
+  'língua portuguesa': '#F5C400',
+  'português': '#F5C400',
+  'direito administrativo': '#1A4FB5',
+};
+function corDaDisciplina(chave){
+  // cor fixa por disciplina (nome conhecido tem cor escolhida a dedo; as
+  // demais usam uma cor fixa baseada na posição na lista do curso) —
+  // assim a cor nunca muda de lugar, seja qual for o ranking do gráfico.
+  if(chave==='geral') return COR_GERAL;
+  const idx = DATA.disciplinas.findIndex(d=>d.id===chave);
+  if(idx<0) return PALETA_GRAFICO[0];
+  const nome = (DATA.disciplinas[idx].header.split(' - ')[1] || DATA.disciplinas[idx].header).trim().toLowerCase();
+  if(CORES_DISCIPLINA_FIXAS[nome]) return CORES_DISCIPLINA_FIXAS[nome];
+  return PALETA_GRAFICO[idx % PALETA_GRAFICO.length];
+}
 function renderTempoEstudo(periodo){
   tempoEstudoPeriodoAtual = periodo;
   document.querySelectorAll('#tempoTabs button').forEach(b=> b.classList.toggle('active', b.dataset.periodo===periodo));
@@ -807,7 +857,7 @@ function renderTempoEstudo(periodo){
 
   const labels = entradas.map(([chave])=> chave==='geral' ? 'Geral' : nomeDisciplinaPorId(chave));
   const valores = entradas.map(([,seg])=> seg);
-  const cores = entradas.map((_,i)=> PALETA_GRAFICO[i % PALETA_GRAFICO.length]);
+  const cores = entradas.map(([chave])=> corDaDisciplina(chave));
 
   graficoTempoEstudo = new Chart(canvas.getContext('2d'), {
     type: 'pie',
@@ -818,7 +868,7 @@ function renderTempoEstudo(periodo){
   document.getElementById('tempoLegenda').innerHTML = entradas.map(([chave, seg], i)=>{
     const nome = chave==='geral' ? 'Geral' : nomeDisciplinaPorId(chave);
     return `<div class="tempo-legenda-row">
-      <span class="tempo-legenda-dot" style="background:${PALETA_GRAFICO[i % PALETA_GRAFICO.length]};"></span>
+      <span class="tempo-legenda-dot" style="background:${corDaDisciplina(chave)};"></span>
       <span class="tempo-legenda-nome">${escapeHtml(nome)}</span>
       <span class="tempo-legenda-linha"></span>
       <span class="tempo-legenda-valor">${formatarDuracao(seg)}</span>
@@ -1120,6 +1170,49 @@ function renderDashboard(){
 
 function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+/* ===== simulador de horas de estudo ===== */
+function renderSimuladorHoras(){
+  const elHs = document.getElementById('simHorasSemana');
+  const elHf = document.getElementById('simHorasFds');
+  const elDur = document.getElementById('simDuracaoBloco');
+  if(!elHs || !elHf || !elDur) return;
+  const hs = parseFloat(elHs.value) || 0;
+  const hf = parseFloat(elHf.value) || 0;
+  const dur = Math.max(10, parseFloat(elDur.value) || 50);
+
+  const totalMinutos = hs*60*5 + hf*60*2;
+  const totalBlocos = Math.floor(totalMinutos / dur);
+
+  document.getElementById('simuladorResumo').textContent =
+    `${totalBlocos} bloco${totalBlocos===1?'':'s'} de estudo por semana · ${formatarDuracao(totalMinutos*60)} no total`;
+
+  const lista = document.getElementById('simuladorLista');
+  if(DATA.disciplinas.length===0 || totalBlocos<=0){
+    lista.innerHTML = '';
+    return;
+  }
+
+  const pesos = DATA.disciplinas.map((s,i)=> priorityScore(i));
+  const somaPesos = pesos.reduce((a,b)=>a+b,0) || 1;
+  const brutos = pesos.map(p=> (p/somaPesos) * totalBlocos);
+  const base = brutos.map(Math.floor);
+  const restantes = totalBlocos - base.reduce((a,b)=>a+b,0);
+  const fracoes = brutos.map((b,i)=>({i, frac: b-base[i]})).sort((a,b)=> b.frac-a.frac);
+  for(let k=0; k<restantes; k++){ if(fracoes[k]) base[fracoes[k].i]++; }
+
+  lista.innerHTML = DATA.disciplinas.map((s,i)=>{
+    const nome = s.header.split(' - ')[1]||s.header;
+    const blocos = base[i];
+    const minutos = blocos*dur;
+    const pctBar = totalBlocos>0 ? Math.round((blocos/totalBlocos)*100) : 0;
+    return `<div class="bar-row">
+      <div class="name">${escapeHtml(nome)}</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pctBar}%; background:${corDaDisciplina(s.id)};"></div></div>
+      <div class="pct">${blocos}x · ${formatarDuracao(minutos*60)}</div>
+    </div>`;
+  }).join('');
+}
+
 /* ===== CRONOGRAMA ===== */
 function scaleButtons(subjIdx, field, current){
   let html = '<div class="scale">';
@@ -1266,6 +1359,23 @@ function setMetaDisciplina(day, disc){
 }
 
 /* ===== DISCIPLINAS ===== */
+function calcularRelevancia(si){
+  const topics = DATA.disciplinas[si].topics;
+  const comNumero = topics.map((t,ti)=>({ti, n:t.num_questoes})).filter(x=> x.n!=null && x.n>0);
+  const mapa = {};
+  if(comNumero.length===0) return mapa;
+  const ordenado = comNumero.slice().sort((a,b)=> b.n-a.n);
+  const total = ordenado.length;
+  ordenado.forEach((item, idx)=>{
+    const posicao = idx/total;
+    let nivel;
+    if(posicao < 1/3) nivel = 'Alta';
+    else if(posicao < 2/3) nivel = 'Média';
+    else nivel = 'Baixa';
+    mapa[item.ti] = nivel;
+  });
+  return mapa;
+}
 function renderDisciplinas(filter, forceOpenAll){
   filter = (filter||'').toLowerCase();
   const html = DATA.disciplinas.map((s,si)=>{
@@ -1275,13 +1385,18 @@ function renderDisciplinas(filter, forceOpenAll){
     });
     if(topics.length===0) return '';
     const stat = subjectTopicStats(si);
+    const relevancia = calcularRelevancia(si);
     const rows = topics.map(t=>{
       const key = si+'-'+t.ti;
       const st = topicState(key);
       const p = pct(st.acertos, st.feitas);
       const badgeCls = st.feitas===0 ? 'neutral' : (p>=70?'good':'bad');
+      const nivel = relevancia[t.ti];
+      const relCls = nivel==='Alta' ? 'rel-alta' : (nivel==='Média' ? 'rel-media' : 'rel-baixa');
+      const relHtml = nivel ? `<span class="badge ${relCls}">${nivel}</span>` : '<span style="color:var(--muted); font-size:11.5px;">—</span>';
       return `<tr>
         <td>${escapeHtml(t.text)}</td>
+        <td style="width:78px;">${relHtml}</td>
         <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.acertos}" onchange="updateTopic('${key}',${si},'acertos',this.value)"></td>
         <td style="width:70px;"><input class="num-input" type="number" min="0" value="${st.feitas}" onchange="updateTopic('${key}',${si},'feitas',this.value)"></td>
         <td style="width:70px;"><span class="badge ${badgeCls}" id="pct-${key}">${p}%</span></td>
@@ -1299,7 +1414,7 @@ function renderDisciplinas(filter, forceOpenAll){
         <span class="chev">›</span>
       </button>
       <div class="acc-body">
-        <table><thead><tr><th>Tópico</th><th>Acertos</th><th>Feitas</th><th>%</th><th>Link</th></tr></thead><tbody>${rows}</tbody></table>
+        <table><thead><tr><th>Tópico</th><th>Relevância</th><th>Acertos</th><th>Feitas</th><th>%</th><th>Link</th></tr></thead><tbody>${rows}</tbody></table>
       </div>
     </div>`;
   }).join('');
@@ -1481,7 +1596,7 @@ function showView(name){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
   document.getElementById('pageTitle').textContent = titles[name];
   if(name==='dashboard') renderDashboard();
-  if(name==='cronograma'){ renderPrioridadesForm(); renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly); }
+  if(name==='cronograma'){ renderPrioridadesForm(); renderSimuladorHoras(); renderCronograma(document.getElementById('cronoSearch').value, cronoPendingOnly); }
   if(name==='disciplinas') renderDisciplinas(document.getElementById('discSearch').value);
   if(name==='simulados') renderSimulados(document.getElementById('simSearch').value);
   if(name==='revisoes') renderRevisoes(document.getElementById('revSearch').value);
@@ -1588,13 +1703,13 @@ async function carregarCurso(curso){
 
   document.getElementById('loadingText').textContent = 'Carregando disciplinas e simulados...';
   const { data: disciplinasRows, error: errDisc } = await sb.from('disciplinas')
-    .select('id,header,ordem,topicos(id,code,texto,link,ordem)')
+    .select('id,header,ordem,topicos(id,code,texto,link,ordem,num_questoes)')
     .eq('curso_id', CURRENT_CURSO.id).order('ordem');
   if(errDisc) console.error('erro ao carregar disciplinas', errDisc);
   const disciplinasOrdenadas = (disciplinasRows||[]).slice().sort((a,b)=>a.ordem-b.ordem);
   DATA.disciplinas = disciplinasOrdenadas.map(d=>({
     id: d.id, header: d.header,
-    topics: (d.topicos||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(t=>({id:t.id, code:t.code, text:t.texto, link:t.link}))
+    topics: (d.topicos||[]).slice().sort((a,b)=>a.ordem-b.ordem).map(t=>({id:t.id, code:t.code, text:t.texto, link:t.link, num_questoes:t.num_questoes}))
   }));
 
   const { data: simRows, error: errSim } = await sb.from('simulados')
