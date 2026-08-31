@@ -611,7 +611,8 @@ let timerSecondsLeft = 1500;
 let timerInterval = null;
 let timerRunning = false;
 let timerPendingSeconds = 0; // segundos ainda não registrados como sessão de estudo
-let timerDisciplinaId = null;
+let timerAlvoTipo = null;    // 'disciplina' | 'simulado' | null (geral)
+let timerAlvoId = null;
 let timerStartedAt = null;   // Date.now() de quando o timer atual começou a rodar
 let timerBaseValue = 0;      // valor de referência (segundos) no momento em que começou a rodar
 let timerPendingBase = 0;    // timerPendingSeconds no momento em que começou a rodar
@@ -645,15 +646,29 @@ function popularSeletorDisciplinaTimer(){
   const sel = document.getElementById('timerDisciplina');
   if(!sel) return;
   const atual = sel.value;
-  sel.innerHTML = '<option value="">Geral (sem disciplina)</option>' + DATA.disciplinas.map((s,i)=>
-    `<option value="${i}">${escapeHtml(s.header.split(' - ')[1]||s.header)}</option>`
-  ).join('');
+  let html = '<option value="">Geral (sem disciplina/simulado)</option>';
+  if(DATA.disciplinas.length){
+    html += '<optgroup label="Disciplinas">' + DATA.disciplinas.map((s,i)=>
+      `<option value="d:${i}">${escapeHtml(s.header.split(' - ')[1]||s.header)}</option>`
+    ).join('') + '</optgroup>';
+  }
+  if(DATA.simulados.length){
+    html += '<optgroup label="Simulados">' + DATA.simulados.map((e,i)=>
+      `<option value="s:${i}">${escapeHtml(e.name)}</option>`
+    ).join('') + '</optgroup>';
+  }
+  sel.innerHTML = html;
   sel.value = atual || '';
 }
 function onTrocarDisciplinaTimer(){
   flushTimerPendente();
   const sel = document.getElementById('timerDisciplina');
-  timerDisciplinaId = sel.value ? DATA.disciplinas[Number(sel.value)].id : null;
+  const val = sel.value; // '', 'd:<i>' ou 's:<i>'
+  if(!val){ timerAlvoTipo = null; timerAlvoId = null; return; }
+  const [tipo, idxStr] = val.split(':');
+  const idx = Number(idxStr);
+  if(tipo==='d'){ timerAlvoTipo = 'disciplina'; timerAlvoId = DATA.disciplinas[idx].id; }
+  else if(tipo==='s'){ timerAlvoTipo = 'simulado'; timerAlvoId = DATA.simulados[idx].id; }
 }
 function atualizarDisplayTimer(){
   const txt = formatarTempoTimer(timerSecondsLeft);
@@ -756,15 +771,17 @@ function resetTimer(){
 }
 function flushTimerPendente(){
   if(timerPendingSeconds >= 5){
-    registrarSessaoEstudo(timerPendingSeconds, timerDisciplinaId);
+    registrarSessaoEstudo(timerPendingSeconds, timerAlvoTipo, timerAlvoId);
   }
   timerPendingSeconds = 0;
 }
-async function registrarSessaoEstudo(segundos, disciplinaId){
+async function registrarSessaoEstudo(segundos, alvoTipo, alvoId){
   if(!CURRENT_USER || !CURRENT_CURSO) return;
   const { error } = await sb.from('sessoes_estudo').insert({
     aluno_id: CURRENT_USER.id, curso_id: CURRENT_CURSO.id,
-    disciplina_id: disciplinaId || null, duracao_segundos: Math.round(segundos)
+    disciplina_id: alvoTipo==='disciplina' ? alvoId : null,
+    simulado_id: alvoTipo==='simulado' ? alvoId : null,
+    duracao_segundos: Math.round(segundos)
   });
   if(error){ console.error('erro ao registrar sessão de estudo', error); return; }
   await carregarSessoesEstudo();
@@ -779,7 +796,7 @@ let graficoTempoEstudo = null;
 async function carregarSessoesEstudo(){
   if(!CURRENT_USER || !CURRENT_CURSO) return;
   const { data, error } = await sb.from('sessoes_estudo')
-    .select('disciplina_id,duracao_segundos,criado_em')
+    .select('disciplina_id,simulado_id,duracao_segundos,criado_em')
     .eq('aluno_id', CURRENT_USER.id).eq('curso_id', CURRENT_CURSO.id);
   if(error){ console.error('erro ao carregar sessões de estudo', error); return; }
   SESSOES_ESTUDO = data || [];
@@ -809,10 +826,23 @@ function filtrarSessoesPorPeriodo(periodo){
     return true; // total
   });
 }
-function nomeDisciplinaPorId(id){
-  if(!id) return 'Geral';
-  const d = DATA.disciplinas.find(x=>x.id===id);
-  return d ? (d.header.split(' - ')[1]||d.header) : 'Geral';
+function chaveDaSessao(s){
+  if(s.disciplina_id) return 'd:'+s.disciplina_id;
+  if(s.simulado_id) return 's:'+s.simulado_id;
+  return 'geral';
+}
+function nomePorChave(chave){
+  if(chave==='geral') return 'Geral';
+  const [tipo, id] = chave.split(':');
+  if(tipo==='d'){
+    const d = DATA.disciplinas.find(x=>x.id===id);
+    return d ? (d.header.split(' - ')[1]||d.header) : 'Geral';
+  }
+  if(tipo==='s'){
+    const e = DATA.simulados.find(x=>x.id===id);
+    return e ? e.name : 'Geral';
+  }
+  return 'Geral';
 }
 const COR_GERAL = '#9AA5B8';
 const CORES_DISCIPLINA_FIXAS = {
@@ -820,30 +850,39 @@ const CORES_DISCIPLINA_FIXAS = {
   'português': '#F5C400',
   'direito administrativo': '#1A4FB5',
 };
-function corDaDisciplina(chave){
-  // cor fixa por disciplina (nome conhecido tem cor escolhida a dedo; as
-  // demais usam uma cor fixa baseada na posição na lista do curso) —
-  // assim a cor nunca muda de lugar, seja qual for o ranking do gráfico.
+function corPorChave(chave){
+  // cor fixa por disciplina/simulado (nome conhecido tem cor escolhida a
+  // dedo; os demais usam uma cor fixa baseada na posição na lista do
+  // curso) — assim a cor nunca muda de lugar, seja qual for o ranking do gráfico.
   if(chave==='geral') return COR_GERAL;
-  const idx = DATA.disciplinas.findIndex(d=>d.id===chave);
-  if(idx<0) return PALETA_GRAFICO[0];
-  const nome = (DATA.disciplinas[idx].header.split(' - ')[1] || DATA.disciplinas[idx].header).trim().toLowerCase();
-  if(CORES_DISCIPLINA_FIXAS[nome]) return CORES_DISCIPLINA_FIXAS[nome];
-  return PALETA_GRAFICO[idx % PALETA_GRAFICO.length];
+  const [tipo, id] = chave.split(':');
+  if(tipo==='d'){
+    const idx = DATA.disciplinas.findIndex(d=>d.id===id);
+    if(idx<0) return PALETA_GRAFICO[0];
+    const nome = (DATA.disciplinas[idx].header.split(' - ')[1] || DATA.disciplinas[idx].header).trim().toLowerCase();
+    if(CORES_DISCIPLINA_FIXAS[nome]) return CORES_DISCIPLINA_FIXAS[nome];
+    return PALETA_GRAFICO[idx % PALETA_GRAFICO.length];
+  }
+  if(tipo==='s'){
+    const idx = DATA.simulados.findIndex(e=>e.id===id);
+    if(idx<0) return PALETA_GRAFICO[0];
+    return PALETA_GRAFICO[(idx + DATA.disciplinas.length) % PALETA_GRAFICO.length];
+  }
+  return PALETA_GRAFICO[0];
 }
 function renderTempoEstudo(periodo){
   tempoEstudoPeriodoAtual = periodo;
   document.querySelectorAll('#tempoTabs button').forEach(b=> b.classList.toggle('active', b.dataset.periodo===periodo));
 
   const sessoes = filtrarSessoesPorPeriodo(periodo);
-  const porDisciplina = {};
+  const porChave = {};
   let totalSegundos = 0;
   sessoes.forEach(s=>{
-    const chave = s.disciplina_id || 'geral';
-    porDisciplina[chave] = (porDisciplina[chave]||0) + (s.duracao_segundos||0);
+    const chave = chaveDaSessao(s);
+    porChave[chave] = (porChave[chave]||0) + (s.duracao_segundos||0);
     totalSegundos += (s.duracao_segundos||0);
   });
-  const entradas = Object.entries(porDisciplina).sort((a,b)=> b[1]-a[1]);
+  const entradas = Object.entries(porChave).sort((a,b)=> b[1]-a[1]);
 
   document.getElementById('tempoTotalTexto').textContent = formatarDuracao(totalSegundos);
 
@@ -855,9 +894,9 @@ function renderTempoEstudo(periodo){
     return;
   }
 
-  const labels = entradas.map(([chave])=> chave==='geral' ? 'Geral' : nomeDisciplinaPorId(chave));
+  const labels = entradas.map(([chave])=> nomePorChave(chave));
   const valores = entradas.map(([,seg])=> seg);
-  const cores = entradas.map(([chave])=> corDaDisciplina(chave));
+  const cores = entradas.map(([chave])=> corPorChave(chave));
 
   graficoTempoEstudo = new Chart(canvas.getContext('2d'), {
     type: 'pie',
@@ -866,9 +905,9 @@ function renderTempoEstudo(periodo){
   });
 
   document.getElementById('tempoLegenda').innerHTML = entradas.map(([chave, seg], i)=>{
-    const nome = chave==='geral' ? 'Geral' : nomeDisciplinaPorId(chave);
+    const nome = nomePorChave(chave);
     return `<div class="tempo-legenda-row">
-      <span class="tempo-legenda-dot" style="background:${corDaDisciplina(chave)};"></span>
+      <span class="tempo-legenda-dot" style="background:${corPorChave(chave)};"></span>
       <span class="tempo-legenda-nome">${escapeHtml(nome)}</span>
       <span class="tempo-legenda-linha"></span>
       <span class="tempo-legenda-valor">${formatarDuracao(seg)}</span>
@@ -1207,7 +1246,7 @@ function renderSimuladorHoras(){
     const pctBar = totalBlocos>0 ? Math.round((blocos/totalBlocos)*100) : 0;
     return `<div class="bar-row">
       <div class="name">${escapeHtml(nome)}</div>
-      <div class="progress-track"><div class="progress-fill" style="width:${pctBar}%; background:${corDaDisciplina(s.id)};"></div></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pctBar}%; background:${corPorChave('d:'+s.id)};"></div></div>
       <div class="pct">${blocos}x · ${formatarDuracao(minutos*60)}</div>
     </div>`;
   }).join('');
@@ -1690,7 +1729,8 @@ async function carregarCurso(curso){
   state = {topics:{}, dayItems:{}, revisoes:{}, exams:{}, config:{examDate:'', startDate:''}, prioridades:{}, customCronograma:null, metas:{}};
   pauseTimer();
   timerPendingSeconds = 0;
-  timerDisciplinaId = null;
+  timerAlvoTipo = null;
+  timerAlvoId = null;
   SESSOES_ESTUDO = [];
 
   const cursoBox = document.getElementById('cursoAtualBox');
