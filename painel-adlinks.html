@@ -429,10 +429,22 @@
             <button data-periodo="hoje" class="active">HOJE</button>
             <button data-periodo="semana">SEMANA</button>
             <button data-periodo="mes">MÊS</button>
+            <button data-periodo="custom">PERÍODO</button>
             <button data-periodo="total">TOTAL</button>
           </div>
         </div>
         <div class="card">
+          <div id="tempoMesNav" class="hidden" style="display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:14px;">
+            <button class="btn ghost" style="padding:6px 10px;" onclick="mudarMes(-1)">‹</button>
+            <span id="tempoMesLabel" style="font-weight:700; color:var(--navy-deeper); font-size:13.5px; min-width:140px; text-align:center;"></span>
+            <button class="btn ghost" style="padding:6px 10px;" onclick="mudarMes(1)">›</button>
+          </div>
+          <div id="tempoCustomNav" class="hidden" style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+            <input type="date" class="date-input" id="tempoCustomInicio">
+            <span style="color:var(--muted); font-size:12.5px;">até</span>
+            <input type="date" class="date-input" id="tempoCustomFim">
+            <button class="btn gold" style="padding:8px 14px;" onclick="aplicarPeriodoCustom()">Aplicar</button>
+          </div>
           <div class="grid cols-2" style="align-items:center;">
             <div style="position:relative; width:100%; max-width:230px; margin:0 auto;">
               <canvas id="graficoTempoEstudo" width="230" height="230"></canvas>
@@ -790,6 +802,28 @@ async function registrarSessaoEstudo(segundos, alvoTipo, alvoId){
 /* ===== tempo de estudo: dados reais ===== */
 let SESSOES_ESTUDO = [];
 let tempoEstudoPeriodoAtual = 'hoje';
+let tempoMesRef = new Date();
+let tempoCustomRange = null;
+
+function nomeMes(data){
+  const txt = data.toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+function mudarMes(delta){
+  tempoMesRef = new Date(tempoMesRef.getFullYear(), tempoMesRef.getMonth()+delta, 1);
+  renderTempoEstudo('mes');
+}
+function aplicarPeriodoCustom(){
+  const ini = document.getElementById('tempoCustomInicio').value;
+  const fim = document.getElementById('tempoCustomFim').value;
+  if(!ini || !fim){ alert('Selecione as duas datas.'); return; }
+  const inicio = new Date(ini+'T00:00:00');
+  const fimExclusivo = new Date(fim+'T00:00:00');
+  fimExclusivo.setDate(fimExclusivo.getDate()+1);
+  if(fimExclusivo <= inicio){ alert('A data final precisa ser depois da inicial.'); return; }
+  tempoCustomRange = {inicio, fim: fimExclusivo};
+  renderTempoEstudo('custom');
+}
 const PALETA_GRAFICO = ['#0D1B3E','#28a745','#6A4A9C','#C0504D','#FFB74D','#4FC3F7','#8D6E63','#EC407A','#26A69A','#7E57C2','#5C6BC0','#FF7043'];
 let graficoTempoEstudo = null;
 
@@ -820,8 +854,13 @@ function filtrarSessoesPorPeriodo(periodo){
       return d >= inicioSemana;
     }
     if(periodo==='mes'){
-      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-      return d >= inicioMes;
+      const inicioMes = new Date(tempoMesRef.getFullYear(), tempoMesRef.getMonth(), 1);
+      const inicioProxMes = new Date(tempoMesRef.getFullYear(), tempoMesRef.getMonth()+1, 1);
+      return d >= inicioMes && d < inicioProxMes;
+    }
+    if(periodo==='custom'){
+      if(!tempoCustomRange) return false;
+      return d >= tempoCustomRange.inicio && d < tempoCustomRange.fim;
     }
     return true; // total
   });
@@ -873,6 +912,11 @@ function corPorChave(chave){
 function renderTempoEstudo(periodo){
   tempoEstudoPeriodoAtual = periodo;
   document.querySelectorAll('#tempoTabs button').forEach(b=> b.classList.toggle('active', b.dataset.periodo===periodo));
+  document.getElementById('tempoMesNav').classList.toggle('hidden', periodo!=='mes');
+  document.getElementById('tempoCustomNav').classList.toggle('hidden', periodo!=='custom');
+  if(periodo==='mes'){
+    document.getElementById('tempoMesLabel').textContent = nomeMes(tempoMesRef);
+  }
 
   const sessoes = filtrarSessoesPorPeriodo(periodo);
   const porChave = {};
@@ -890,7 +934,10 @@ function renderTempoEstudo(periodo){
   if(graficoTempoEstudo){ graficoTempoEstudo.destroy(); graficoTempoEstudo = null; }
 
   if(entradas.length===0){
-    document.getElementById('tempoLegenda').innerHTML = `<div style="color:var(--muted); font-size:12.5px;">Nenhuma sessão de estudo registrada nesse período. Use o relógio no canto da tela pra cronometrar seus estudos.</div>`;
+    const msgVazia = (periodo==='custom' && !tempoCustomRange)
+      ? 'Escolha as duas datas acima e clique em Aplicar.'
+      : 'Nenhuma sessão de estudo registrada nesse período. Use o relógio no canto da tela pra cronometrar seus estudos.';
+    document.getElementById('tempoLegenda').innerHTML = `<div style="color:var(--muted); font-size:12.5px;">${msgVazia}</div>`;
     return;
   }
 
@@ -1732,6 +1779,8 @@ async function carregarCurso(curso){
   timerAlvoTipo = null;
   timerAlvoId = null;
   SESSOES_ESTUDO = [];
+  tempoMesRef = new Date();
+  tempoCustomRange = null;
 
   const cursoBox = document.getElementById('cursoAtualBox');
   if(MEUS_CURSOS.length>1){
