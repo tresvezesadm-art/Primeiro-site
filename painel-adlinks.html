@@ -629,9 +629,35 @@ let timerStartedAt = null;   // Date.now() de quando o timer atual começou a ro
 let timerBaseValue = 0;      // valor de referência (segundos) no momento em que começou a rodar
 let timerPendingBase = 0;    // timerPendingSeconds no momento em que começou a rodar
 
+let audioCtx = null;
+function destravarAudio(){
+  // Navegadores mobile só permitem tocar som se o AudioContext for
+  // criado/retomado dentro de um toque direto do usuário. Por isso
+  // isso é chamado no clique de "Iniciar", não só na hora do alarme.
+  try{
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+    // toca um som inaudível pra garantir que o iOS realmente destravou
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0;
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.01);
+  }catch(e){}
+}
 function tocarAlertaSonoro(){
   try{
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+    const ctx = audioCtx;
     const beep = (freq, delay, dur)=>{
       setTimeout(()=>{
         const osc = ctx.createOscillator();
@@ -748,6 +774,7 @@ function pararTimerInterno(){
   flushTimerPendente();
 }
 function startTimer(){
+  destravarAudio();
   timerRunning = true;
   timerStartedAt = Date.now();
   timerBaseValue = timerSecondsLeft;
