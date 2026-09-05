@@ -650,6 +650,7 @@ function destravarAudio(){
   }catch(e){}
 }
 function tocarAlertaSonoro(){
+  mostrarAlertaVisual();
   try{
     if(!audioCtx){
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -664,13 +665,36 @@ function tocarAlertaSonoro(){
         const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
         osc.frequency.value = freq;
-        osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + dur);
-        osc.stop(ctx.currentTime + dur);
+        const t0 = ctx.currentTime;
+        gain.gain.setValueAtTime(0.9, t0);
+        gain.gain.exponentialRampToValueAtTime(0.00001, t0 + dur);
+        osc.start(t0);
+        osc.stop(t0 + dur);
       }, delay);
     };
     beep(880, 0, 0.3); beep(880, 400, 0.3); beep(1046, 800, 0.6);
   }catch(e){}
+}
+function mostrarAlertaVisual(){
+  // Reforço visual: no iOS o som pode ficar mudo se o botão físico de
+  // silencioso estiver ativado (o Safari respeita esse botão pro Web
+  // Audio), então esse flash garante que o aluno perceba mesmo assim.
+  let overlay = document.getElementById('alertaVisualFlash');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'alertaVisualFlash';
+    overlay.style.cssText = 'position:fixed; inset:0; z-index:9999; pointer-events:none; background:var(--gold); opacity:0; transition:opacity .15s ease;';
+    document.body.appendChild(overlay);
+  }
+  let n = 0;
+  const piscar = ()=>{
+    overlay.style.opacity = (n%2===0) ? '0.55' : '0';
+    n++;
+    if(n < 6) setTimeout(piscar, 220);
+    else overlay.style.opacity = '0';
+  };
+  piscar();
+  if(navigator.vibrate){ navigator.vibrate([200,100,200,100,200]); }
 }
 function formatarTempoTimer(sec){
   const m = Math.floor(sec/60).toString().padStart(2,'0');
