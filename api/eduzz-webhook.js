@@ -14,7 +14,8 @@ export const config = {
 // curso correspondente na tabela "cursos" do Supabase.
 // ============================================================
 const PRODUTO_PARA_CURSO = {
-  'TROQUE_PELO_ID_DO_PRODUTO': 'curso-modelo-teste',
+  '3088563': 'pre-edital-cgu',
+  '3121125': 'pos-edital-eppgg-ba',
 };
 
 function lerCorpoCru(req) {
@@ -24,6 +25,15 @@ function lerCorpoCru(req) {
     req.on('end', () => resolve(dados));
     req.on('error', reject);
   });
+}
+
+// Tenta achar o ID do produto em vários lugares possíveis do item da fatura.
+function idsDoItem(item) {
+  const cand = [
+    item.productId, item.product_id, item.product && item.product.id,
+    item.product && item.product.productId, item.contentId, item.content_id, item.id,
+  ];
+  return cand.filter((v) => v !== undefined && v !== null && v !== '').map((v) => String(v));
 }
 
 function assinaturaValida(corpoCru, assinaturaRecebida, chaveSecreta) {
@@ -65,16 +75,25 @@ export default async function handler(req, res) {
   // reembolsada etc.) são ignorados por enquanto, mas retornam 200
   // pra Eduzz não ficar reenviando.
   if (payload.event !== 'myeduzz.invoice_paid') {
+    console.log('eduzz-webhook evento ignorado:', payload.event);
     return res.status(200).json({ ok: true, ignorado: payload.event });
   }
 
   const dadosFatura = payload.data || {};
-  const comprador = dadosFatura.buyer || dadosFatura.student || {};
-  const email = comprador.email;
+  const comprador = dadosFatura.buyer || dadosFatura.student || dadosFatura.customer || dadosFatura.payer || {};
+  const email = comprador.email ? String(comprador.email).trim().toLowerCase() : comprador.email;
   const nome = comprador.name;
-  const itens = dadosFatura.items || [];
+  const itens = dadosFatura.items || dadosFatura.products || [];
+
+  // Registro pra conferir no Vercel > Logs o que a Eduzz realmente enviou (sem dados pessoais).
+  console.log('eduzz-webhook invoice_paid', JSON.stringify({
+    chavesData: Object.keys(dadosFatura),
+    temEmail: !!email,
+    itens: itens.map((i) => ({ chaves: Object.keys(i), ids: idsDoItem(i) })),
+  }));
 
   if (!email) {
+    console.log('eduzz-webhook sem e-mail do comprador');
     return res.status(200).json({ ok: false, erro: 'Fatura sem e-mail de comprador' });
   }
 
@@ -86,9 +105,11 @@ export default async function handler(req, res) {
   const resultados = [];
 
   for (const item of itens) {
-    const cursoSlug = PRODUTO_PARA_CURSO[item.productId];
+    const idEncontrado = idsDoItem(item).find((id) => PRODUTO_PARA_CURSO[id]);
+    const cursoSlug = idEncontrado ? PRODUTO_PARA_CURSO[idEncontrado] : null;
     if (!cursoSlug) {
-      resultados.push({ productId: item.productId, ignorado: true, motivo: 'produto não mapeado' });
+      console.log('eduzz-webhook produto não mapeado', JSON.stringify(idsDoItem(item)));
+      resultados.push({ ids: idsDoItem(item), ignorado: true, motivo: 'produto não mapeado' });
       continue;
     }
 
@@ -110,9 +131,10 @@ export default async function handler(req, res) {
       // Cria a conta e manda um e-mail de convite pro aluno definir a senha.
       const { data: convite, error: erroConvite } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         email,
-        { data: { full_name: nome || '' } }
+        { data: { full_name: nome || '' }, redirectTo: 'https://www.tresvezesadm.com.br/login.html' }
       );
       if (erroConvite) {
+        console.log('eduzz-webhook falha ao criar conta:', erroConvite.message);
         resultados.push({ email, erro: 'falha ao criar conta: ' + erroConvite.message });
         continue;
       }
