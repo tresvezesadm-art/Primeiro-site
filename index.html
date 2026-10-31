@@ -169,10 +169,9 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .acoes .btn{flex:1 1 120px;min-height:44px;padding:0 12px;font-size:14px}
 
 /* Feedbacks */
-.prints{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x mandatory;scrollbar-width:thin}
-.print{flex:none;height:300px;border-radius:10px;overflow:hidden;background:var(--branco);border:1px solid var(--linha);scroll-snap-align:start;display:flex;align-items:center;justify-content:center;color:var(--cinza);font-size:13px;min-width:150px}
-.print img{height:100%;width:auto;max-width:none;display:block}
-@media (max-width:560px){.print{height:240px}}
+.prints{columns:5 190px;column-gap:14px;max-width:1100px}
+.print{break-inside:avoid;margin:0 0 14px;border-radius:10px;overflow:hidden;background:var(--branco);border:1px solid var(--linha);display:block;color:var(--cinza);font-size:13px;min-height:80px}
+.print img{width:100%;height:auto;display:block}
 
 /* FAQ */
 .faq-sec{background:var(--branco);border-top:1px solid var(--linha)}
