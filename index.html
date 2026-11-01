@@ -65,7 +65,7 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 
 /* Cabeçalho */
 .topo{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--branco);border-bottom:1px solid var(--linha)}
-.topo .wrap{height:76px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.topo > .wrap{height:76px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
 .logo-marca{width:42px;height:42px;border-radius:10px;background:var(--azul);color:var(--ouro);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:19px}
 .logo-nome{font-family:var(--display);font-weight:800;font-size:21px;color:var(--azul);line-height:1}
@@ -76,9 +76,10 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .menu a:hover{color:var(--tinta)}
 .topo .btn{min-height:44px;padding:0 18px;font-size:14px}
 .btn-menu{display:none;width:44px;height:44px;border:0;background:none;color:var(--tinta);cursor:pointer;align-items:center;justify-content:center;border-radius:8px}
-.menu-mobile{border-top:1px solid var(--linha);background:var(--branco)}
-.menu-mobile .wrap{display:flex;flex-direction:column;gap:4px;padding-block:16px 20px}
-.menu-mobile a{color:var(--tinta);text-decoration:none;font-weight:500;padding:12px 0}
+.menu-mobile{border-top:1px solid var(--linha);background:var(--branco);box-shadow:0 18px 30px -18px rgba(13,27,62,.35);max-height:calc(100vh - 76px);overflow-y:auto}
+.menu-mobile .wrap{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding-block:12px 20px}
+.menu-mobile a{color:var(--tinta);text-decoration:none;font-weight:500;padding:12px 0;border-bottom:1px solid var(--linha)}
+.menu-mobile a.btn{border-bottom:0}
 .menu-mobile .btn{margin-top:8px}
 @media (max-width:940px){.menu,.topo .btn-membro{display:none}.btn-menu{display:inline-flex}}
 
