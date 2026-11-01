@@ -30,7 +30,7 @@
   color-scheme:light;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 body{margin:0;background:var(--fundo);color:var(--tinta);font-family:var(--texto);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--branco)}
@@ -63,7 +63,7 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .aviso a:hover{color:var(--ouro-vivo)}
 
 /* Cabeçalho */
-.topo{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--linha)}
+.topo{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--branco);border-bottom:1px solid var(--linha)}
 .topo .wrap{height:76px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none}
 .logo-marca{width:42px;height:42px;border-radius:10px;background:var(--azul);color:var(--ouro);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:19px}
@@ -94,22 +94,46 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .recursos-mini li{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--tinta)}
 .recursos-mini svg{width:18px;height:18px;color:var(--azul);flex:none}
 
-/* Carrossel da plataforma */
-.carrossel-sec{background:var(--fundo)}
-.setas{display:flex;gap:10px}
-.seta{width:48px;height:48px;border-radius:50%;border:1px solid var(--linha);background:var(--branco);color:var(--tinta);display:flex;align-items:center;justify-content:center;cursor:pointer}
-.seta:hover{border-color:var(--ouro);background:var(--ouro-claro)}
-.seta svg{width:20px;height:20px}
-.carrossel{list-style:none;margin:0;padding:0 0 12px;display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:thin}
-.slide{flex:0 0 min(400px,85%);scroll-snap-align:start}
-.slide-img{aspect-ratio:1/1;max-width:100%;border-radius:var(--raio);overflow:hidden;background:var(--branco);border:1px solid var(--linha);display:flex;align-items:center;justify-content:center;text-align:center;padding:0;color:var(--azul);font-size:14px;font-weight:600}
-.slide-img img{width:100%;height:100%;object-fit:cover}
+/* Carrossel da plataforma: tela em destaque no centro, vizinhas nas laterais, clique para ampliar */
+.carrossel-sec{background:var(--azul);color:var(--branco);overflow:hidden}
+.carrossel-sec .rotulo{color:var(--ouro-vivo)}
+.carrossel-sec .titulo{color:var(--branco)}
+.carrossel-sec .sub{color:#D3DEF0}
+.carrossel-sec .centro{margin-bottom:36px}
+.carrossel{--slide-w:min(560px,82vw);list-style:none;margin:0;padding:8px calc((100% - var(--slide-w))/2) 8px;display:flex;gap:24px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.carrossel::-webkit-scrollbar{display:none}
+.slide{flex:0 0 var(--slide-w);scroll-snap-align:center;opacity:.45;transform:scale(.92);transition:opacity .3s,transform .3s}
+.slide.ativo{opacity:1;transform:none}
+.slide-btn{display:block;width:100%;padding:0;border:0;background:var(--branco);border-radius:16px;overflow:hidden;cursor:zoom-in;box-shadow:0 24px 50px -24px rgba(0,0,0,.55);position:relative}
+.slide-btn img{width:100%;height:auto;display:block}
+.slide-btn .lupa{position:absolute;right:12px;bottom:12px;width:40px;height:40px;border-radius:50%;background:rgba(13,27,62,.82);color:var(--branco);display:flex;align-items:center;justify-content:center}
+.slide-btn .lupa svg{width:18px;height:18px}
+.car-ctrl{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:28px}
+.seta{width:52px;height:52px;border-radius:12px;border:0;background:var(--ouro);color:var(--tinta);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.seta:hover{background:var(--ouro-vivo)}
+.seta svg{width:22px;height:22px}
+.pontos{display:flex;gap:8px}
+.ponto{width:10px;height:10px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.35);cursor:pointer}
+.ponto[aria-current="true"]{background:var(--ouro);width:26px;border-radius:99px}
+.dica{text-align:center;font-size:13px;color:#D3DEF0;margin:16px 0 0}
+
+/* Tela cheia (ampliar imagem) */
+.lightbox{position:fixed;inset:0;z-index:100;background:#0A1226;display:flex;flex-direction:column}
+.lightbox[hidden]{display:none}
+.lb-topo{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));color:#D3DEF0;font-size:14px}
+.lb-btn{width:44px;height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:var(--branco);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.lb-btn svg{width:20px;height:20px}
+.lb-palco{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:8px 16px;touch-action:pan-x pan-y pinch-zoom}
+.lb-palco img{max-width:100%;max-height:100%;width:auto;height:auto;border-radius:10px;cursor:zoom-in;background:var(--branco)}
+.lb-palco.zoom{display:block}
+.lb-palco.zoom img{max-width:none;max-height:none;width:min(1800px,200vw);cursor:zoom-out;border-radius:0}
+.lb-base{display:flex;justify-content:center;gap:12px;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0px))}
 
 /* Plataformas disponíveis */
 .plataformas{background:var(--branco);border-block:1px solid var(--linha)}
 .duas{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px}
 .plat{border:1px solid var(--linha);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;background:var(--branco);transition:box-shadow .2s,transform .2s}
-.plat:hover{transform:translateY(-4px);box-shadow:0 24px 40px -18px rgba(20,33,58,.2)}
+@media (hover:hover){.plat:hover{transform:translateY(-4px);box-shadow:0 24px 40px -18px rgba(20,33,58,.2)}}
 .plat-capa{background:var(--azul-claro);padding:28px 30px;display:flex;flex-direction:column;gap:18px;border-bottom:1px solid var(--linha)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:5px;background:var(--branco);color:var(--cinza)}
@@ -169,8 +193,8 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .acoes .btn{flex:1 1 120px;min-height:44px;padding:0 12px;font-size:14px}
 
 /* Feedbacks */
-.prints{columns:5 190px;column-gap:14px;max-width:1100px}
-.print{break-inside:avoid;margin:0 0 14px;border-radius:10px;overflow:hidden;background:var(--branco);border:1px solid var(--linha);display:block;color:var(--cinza);font-size:13px;min-height:80px}
+.prints{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:14px;align-items:start;max-width:1100px}
+.print{margin:0;border-radius:10px;overflow:hidden;background:var(--branco);border:1px solid var(--linha);display:block;color:var(--cinza);font-size:13px;min-height:80px}
 .print img{width:100%;height:auto;display:block}
 
 /* FAQ */
@@ -285,27 +309,43 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
 <!-- ============ POR DENTRO (CARROSSEL) ============ -->
 <section id="por-dentro" class="sec carrossel-sec">
   <div class="wrap">
-    <div class="sec-topo">
-      <div>
-        <span class="rotulo">Por dentro da plataforma</span>
-        <h2 class="titulo">Veja como estudar pela plataforma</h2>
-        <p class="sub">Arraste pro lado pra ver as telas que você vai usar todo dia.</p>
-      </div>
-      <div class="setas">
-        <button class="seta" id="ant" aria-label="Imagem anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
-        <button class="seta" id="prox" aria-label="Próxima imagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
-      </div>
+    <div class="centro">
+      <span class="rotulo">Por dentro da plataforma</span>
+      <h2 class="titulo">Veja como estudar pela plataforma</h2>
+      <p class="sub">As telas que você vai usar todo dia.</p>
     </div>
-    <ul class="carrossel" id="carrossel" aria-label="Telas do ADLinks Plataforma">
-      <li class="slide"><div class="slide-img"><img src="plataforma-1.jpg" alt="Visão geral da plataforma: dias para a prova, desempenho, cronograma e simulados" loading="lazy" width="1080" height="1080"></div></li>
-      <li class="slide"><div class="slide-img"><img src="plataforma-2.jpg" alt="Cronograma que se monta sozinho a partir da nota de cada disciplina" loading="lazy" width="1080" height="1080"></div></li>
-      <li class="slide"><div class="slide-img"><img src="plataforma-3.jpg" alt="Edital inteiro por assunto, com relevância e link direto para as questões" loading="lazy" width="1080" height="1080"></div></li>
-      <li class="slide"><div class="slide-img"><img src="plataforma-4.jpg" alt="Revisões com data e aviso na hora de revisar" loading="lazy" width="1080" height="1080"></div></li>
-      <li class="slide"><div class="slide-img"><img src="plataforma-5.jpg" alt="Simulados do tamanho da prova, com acertos e evolução" loading="lazy" width="1080" height="1080"></div></li>
-      <li class="slide"><div class="slide-img"><img src="plataforma-6.jpg" alt="Cronômetro dentro da plataforma, com pomodoro e timer livre" loading="lazy" width="1080" height="1080"></div></li>
-    </ul>
+  </div>
+  <ul class="carrossel" id="carrossel" aria-label="Telas do ADLinks Plataforma">
+      <li class="slide"><button class="slide-btn" type="button" data-i="0" aria-label="Ampliar: Visão geral da plataforma: dias para a prova, desempenho, cronograma e simulados"><img src="plataforma-1.jpg" alt="Visão geral da plataforma: dias para a prova, desempenho, cronograma e simulados" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+      <li class="slide"><button class="slide-btn" type="button" data-i="1" aria-label="Ampliar: Cronograma que se monta sozinho a partir da nota de cada disciplina"><img src="plataforma-2.jpg" alt="Cronograma que se monta sozinho a partir da nota de cada disciplina" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+      <li class="slide"><button class="slide-btn" type="button" data-i="2" aria-label="Ampliar: Edital inteiro por assunto, com relevância e link direto para as questões"><img src="plataforma-3.jpg" alt="Edital inteiro por assunto, com relevância e link direto para as questões" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+      <li class="slide"><button class="slide-btn" type="button" data-i="3" aria-label="Ampliar: Revisões com data e aviso na hora de revisar"><img src="plataforma-4.jpg" alt="Revisões com data e aviso na hora de revisar" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+      <li class="slide"><button class="slide-btn" type="button" data-i="4" aria-label="Ampliar: Simulados do tamanho da prova, com acertos e evolução"><img src="plataforma-5.jpg" alt="Simulados do tamanho da prova, com acertos e evolução" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+      <li class="slide"><button class="slide-btn" type="button" data-i="5" aria-label="Ampliar: Cronômetro dentro da plataforma, com pomodoro e timer livre"><img src="plataforma-6.jpg" alt="Cronômetro dentro da plataforma, com pomodoro e timer livre" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+  </ul>
+  <div class="wrap">
+    <div class="car-ctrl">
+      <button class="seta" id="ant" type="button" aria-label="Tela anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="pontos" id="pontos" role="group" aria-label="Escolher tela"></div>
+      <button class="seta" id="prox" type="button" aria-label="Próxima tela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+    <p class="dica">Toque na imagem para ampliar.</p>
   </div>
 </section>
+
+<!-- Tela cheia das imagens da plataforma -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Imagem ampliada" hidden>
+  <div class="lb-topo">
+    <span id="lb-cont">1 de 6</span>
+    <button class="lb-btn" id="lb-fechar" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="lb-palco" id="lb-palco"><img id="lb-img" src="" alt=""></div>
+  <div class="lb-base">
+    <button class="lb-btn" id="lb-ant" type="button" aria-label="Imagem anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <button class="lb-btn" id="lb-zoom" type="button" aria-label="Aproximar ou afastar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></button>
+    <button class="lb-btn" id="lb-prox" type="button" aria-label="Próxima imagem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>
+</div>
 
 <!-- ============ PLATAFORMAS DISPONÍVEIS ============ -->
 <section id="plataformas" class="sec plataformas">
@@ -313,7 +353,7 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
     <div class="centro">
       <span class="rotulo">ADLinks Plataforma disponível</span>
       <h2 class="titulo">Escolha o ADLinks do seu concurso</h2>
-      <p class="sub">Cada plataforma é montada em cima de um edital, com as disciplinas e os tópicos dele.</p>
+      <p class="sub">Cada ADLinks é montado em cima de um edital, com as disciplinas e os tópicos dele.</p>
     </div>
     <div class="duas">
 
@@ -356,7 +396,7 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
       </article>
 
     </div>
-    <p class="nota">Novas plataformas saem conforme os editais. Acompanhe no <a href="https://instagram.com/3vezesadm">@3vezesadm</a>.</p>
+    <p class="nota">Novos ADLinks saem conforme os editais. Acompanhe no <a href="https://instagram.com/3vezesadm">@3vezesadm</a>.</p>
   </div>
 </section>
 
@@ -610,10 +650,61 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
   });
 
   // Carrossel da plataforma
-  var car=document.getElementById('carrossel');
-  function passo(){var sl=car.querySelector('.slide');return sl?sl.getBoundingClientRect().width+20:300;}
-  document.getElementById('ant').addEventListener('click',function(){car.scrollBy({left:-passo()});});
-  document.getElementById('prox').addEventListener('click',function(){car.scrollBy({left:passo()});});
+  var car=document.getElementById('carrossel'), slides=[].slice.call(car.querySelectorAll('.slide')), pontos=document.getElementById('pontos'), atual=0;
+  slides.forEach(function(sl,i){
+    var b=document.createElement('button'); b.type='button'; b.className='ponto'; b.setAttribute('aria-label','Tela '+(i+1));
+    b.addEventListener('click',function(){ir(i);}); pontos.appendChild(b);
+  });
+  function marca(i){
+    atual=i;
+    slides.forEach(function(sl,k){sl.classList.toggle('ativo',k===i);});
+    [].forEach.call(pontos.children,function(p,k){p.setAttribute('aria-current',String(k===i));});
+  }
+  function ir(i){
+    i=(i+slides.length)%slides.length;
+    var sl=slides[i];
+    car.scrollTo({left:sl.offsetLeft-(car.clientWidth-sl.offsetWidth)/2});
+    marca(i);
+  }
+  var t;
+  car.addEventListener('scroll',function(){
+    clearTimeout(t);
+    t=setTimeout(function(){
+      var meio=car.scrollLeft+car.clientWidth/2, melhor=0, dist=1e9;
+      slides.forEach(function(sl,k){var d=Math.abs(sl.offsetLeft+sl.offsetWidth/2-meio); if(d<dist){dist=d;melhor=k;}});
+      marca(melhor);
+    },80);
+  },{passive:true});
+  document.getElementById('ant').addEventListener('click',function(){ir(atual-1);});
+  document.getElementById('prox').addEventListener('click',function(){ir(atual+1);});
+  marca(0);
+
+  // Tela cheia
+  var lb=document.getElementById('lightbox'), lbImg=document.getElementById('lb-img'), palco=document.getElementById('lb-palco'), cont=document.getElementById('lb-cont'), lbI=0, origem=null;
+  var imgs=slides.map(function(sl){return sl.querySelector('img');});
+  function mostra(i){
+    lbI=(i+imgs.length)%imgs.length;
+    lbImg.src=imgs[lbI].currentSrc||imgs[lbI].src; lbImg.alt=imgs[lbI].alt;
+    cont.textContent=(lbI+1)+' de '+imgs.length;
+    palco.classList.remove('zoom'); palco.scrollTop=0; palco.scrollLeft=0;
+  }
+  function abre(i){origem=document.activeElement; mostra(i); lb.hidden=false; document.body.style.overflow='hidden'; document.getElementById('lb-fechar').focus();}
+  function fecha(){lb.hidden=true; document.body.style.overflow=''; ir(lbI); if(origem)origem.focus();}
+  function zoom(){palco.classList.toggle('zoom');}
+  car.querySelectorAll('.slide-btn').forEach(function(b){b.addEventListener('click',function(){abre(+b.getAttribute('data-i'));});});
+  document.getElementById('lb-fechar').addEventListener('click',fecha);
+  document.getElementById('lb-ant').addEventListener('click',function(){mostra(lbI-1);});
+  document.getElementById('lb-prox').addEventListener('click',function(){mostra(lbI+1);});
+  document.getElementById('lb-zoom').addEventListener('click',zoom);
+  lbImg.addEventListener('click',zoom);
+  palco.addEventListener('click',function(e){if(e.target===palco&&!palco.classList.contains('zoom'))fecha();});
+  document.addEventListener('keydown',function(e){
+    if(lb.hidden)return;
+    if(e.key==='Escape')fecha(); else if(e.key==='ArrowLeft')mostra(lbI-1); else if(e.key==='ArrowRight')mostra(lbI+1);
+  });
+  var x0=null;
+  palco.addEventListener('touchstart',function(e){x0=(e.touches.length===1&&!palco.classList.contains('zoom'))?e.touches[0].clientX:null;},{passive:true});
+  palco.addEventListener('touchend',function(e){if(x0===null)return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>50)mostra(lbI+(dx<0?1:-1)); x0=null;});
 })();
 </script>
 </body>
