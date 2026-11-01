@@ -7,7 +7,7 @@
 <meta name="description" content="ADLinks Plataforma para concursos da área administrativa: cronograma, revisões, simulados e links por tópico do edital. Também materiais em PDF e ADMapas.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Layout: plataforma de links primeiro (hero, carrossel, plataformas, recursos), materiais em PDF depois, numa seção mais discreta. */
 :root{
@@ -24,6 +24,7 @@
   --branco:#FFFFFF;
   --linha:#E1E6EE;
   --display:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --serif:'Fraunces',Georgia,'Times New Roman',serif;
   --texto:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
   --raio:12px;
   --max:1200px;
@@ -85,9 +86,9 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .hero{background:var(--branco);border-bottom:1px solid var(--linha);padding-block:84px 88px;text-align:center}
 .selo{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:var(--fundo);border:1px solid var(--linha);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta)}
 .selo svg{width:14px;height:14px;color:var(--ouro)}
-.hero h1{font-size:clamp(38px,6vw,70px);font-weight:800;line-height:1.06;color:var(--tinta);max-width:940px;margin:28px auto 0;letter-spacing:-0.035em}
+.hero h1{font-family:var(--serif);font-size:clamp(42px,6.8vw,84px);font-weight:800;line-height:1.04;color:var(--tinta);max-width:960px;margin:26px auto 0;letter-spacing:-0.02em;font-optical-sizing:auto}
 .hero h1 .marca{color:var(--azul)}
-.hero h1 .grifo{text-decoration:underline;text-decoration-color:var(--ouro);text-decoration-thickness:6px;text-underline-offset:10px}
+.hero h1 .grifo{position:relative;display:inline-block;padding:0 .08em;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 40' preserveAspectRatio='none'%3E%3Cpath d='M4 22 C60 10 140 6 296 14 L292 34 C200 28 90 32 8 38 Z' fill='%23F5C400'/%3E%3C/svg%3E") no-repeat 0 88%/100% .42em}
 .hero p{font-size:clamp(17px,2vw,20px);color:var(--cinza);max-width:680px;margin:24px auto 0}
 .hero-ctas{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:36px}
 .recursos-mini{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 22px;max-width:820px;margin:48px auto 0;padding-top:28px;border-top:1px solid var(--linha);list-style:none;padding-left:0}
@@ -288,7 +289,7 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
       ADLinks Plataforma
     </span>
-    <h1><span class="marca">3xAdm:</span> simplificamos o seu <span class="grifo">estudo.</span></h1>
+    <h1><span class="marca">3x Adm:</span> simplificamos o seu <span class="grifo">estudo.</span></h1>
     <p>Cronograma, disciplinas, revisões e simulados num lugar só. Cada tópico do edital com o link pra estudar, e a relevância de cada assunto na banca do seu concurso.</p>
     <div class="hero-ctas">
       <a href="#plataformas" class="btn btn-ouro">Conhecer as plataformas
