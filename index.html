@@ -101,15 +101,18 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .carrossel-sec .titulo{color:var(--branco)}
 .carrossel-sec .sub{color:#D3DEF0}
 .carrossel-sec .centro{margin-bottom:36px}
-.carrossel{--slide-w:min(560px,82vw);list-style:none;margin:0;padding:8px calc((100% - var(--slide-w))/2) 8px;display:flex;gap:24px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.carrossel{--slide-w:min(920px,86vw);list-style:none;margin:0;padding:8px calc((100% - var(--slide-w))/2) 8px;display:flex;gap:24px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .carrossel::-webkit-scrollbar{display:none}
 .slide{flex:0 0 var(--slide-w);scroll-snap-align:center;opacity:.45;transform:scale(.92);transition:opacity .3s,transform .3s}
 .slide.ativo{opacity:1;transform:none}
 .slide-btn{display:block;width:100%;padding:0;border:0;background:var(--branco);border-radius:16px;overflow:hidden;cursor:zoom-in;box-shadow:0 24px 50px -24px rgba(0,0,0,.55);position:relative}
-.slide-btn img{width:100%;height:auto;display:block}
+.slide-btn img{width:100%;aspect-ratio:16/9;height:auto;object-fit:contain;background:#F3F5F9;display:block}
 .slide-btn .lupa{position:absolute;right:12px;bottom:12px;width:40px;height:40px;border-radius:50%;background:rgba(13,27,62,.82);color:var(--branco);display:flex;align-items:center;justify-content:center}
 .slide-btn .lupa svg{width:18px;height:18px}
-.car-ctrl{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:28px}
+.legenda{max-width:640px;margin:26px auto 0;text-align:center;min-height:96px}
+.legenda h3{font-size:22px;font-weight:800;color:var(--branco)}
+.legenda p{margin:8px 0 0;color:#D3DEF0;font-size:16px}
+.car-ctrl{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:18px}
 .seta{width:52px;height:52px;border-radius:12px;border:0;background:var(--ouro);color:var(--tinta);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .seta:hover{background:var(--ouro-vivo)}
 .seta svg{width:22px;height:22px}
@@ -313,31 +316,32 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
     <div class="centro">
       <span class="rotulo">Por dentro da plataforma</span>
       <h2 class="titulo">Veja como estudar pela plataforma</h2>
-      <p class="sub">As telas que você vai usar todo dia.</p>
+      <p class="sub">As telas que você vai usar todo dia. Toque em qualquer uma pra ver de perto.</p>
     </div>
   </div>
   <ul class="carrossel" id="carrossel" aria-label="Telas do ADLinks Plataforma">
-      <li class="slide"><button class="slide-btn" type="button" data-i="0" aria-label="Ampliar: Visão geral da plataforma: dias para a prova, desempenho, cronograma e simulados"><img src="plataforma-1.jpg" alt="Visão geral da plataforma: dias para a prova, desempenho, cronograma e simulados" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
-      <li class="slide"><button class="slide-btn" type="button" data-i="1" aria-label="Ampliar: Cronograma que se monta sozinho a partir da nota de cada disciplina"><img src="plataforma-2.jpg" alt="Cronograma que se monta sozinho a partir da nota de cada disciplina" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
-      <li class="slide"><button class="slide-btn" type="button" data-i="2" aria-label="Ampliar: Edital inteiro por assunto, com relevância e link direto para as questões"><img src="plataforma-3.jpg" alt="Edital inteiro por assunto, com relevância e link direto para as questões" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
-      <li class="slide"><button class="slide-btn" type="button" data-i="3" aria-label="Ampliar: Revisões com data e aviso na hora de revisar"><img src="plataforma-4.jpg" alt="Revisões com data e aviso na hora de revisar" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
-      <li class="slide"><button class="slide-btn" type="button" data-i="4" aria-label="Ampliar: Simulados do tamanho da prova, com acertos e evolução"><img src="plataforma-5.jpg" alt="Simulados do tamanho da prova, com acertos e evolução" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
-      <li class="slide"><button class="slide-btn" type="button" data-i="5" aria-label="Ampliar: Cronômetro dentro da plataforma, com pomodoro e timer livre"><img src="plataforma-6.jpg" alt="Cronômetro dentro da plataforma, com pomodoro e timer livre" loading="lazy" width="1080" height="1080"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+    <li class="slide" data-titulo="Tudo num painel só" data-texto="Dias até a prova, desempenho geral, cronograma cumprido, simulados e quanto tempo você estudou de cada disciplina."><button class="slide-btn" type="button" data-i="0" aria-label="Ampliar: Tudo num painel só"><img src="tela-1.jpg" alt="Tudo num painel só: Dias até a prova, desempenho geral, cronograma cumprido, simulados e quanto tempo você estudou de cada disciplina." loading="lazy" width="1600" height="866"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+    <li class="slide" data-titulo="O cronograma se monta pra você" data-texto="Seu plano dividido em dias, com a meta do dia. É só marcar o que estudou. Dá pra personalizar o cronograma e simular quantas horas você tem por dia."><button class="slide-btn" type="button" data-i="1" aria-label="Ampliar: O cronograma se monta pra você"><img src="tela-2.jpg" alt="O cronograma se monta pra você: Seu plano dividido em dias, com a meta do dia. É só marcar o que estudou. Dá pra personalizar o cronograma e simular quantas horas você tem por dia." loading="lazy" width="1600" height="823"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+    <li class="slide" data-titulo="O edital inteiro, por assunto" data-texto="Cada assunto com a relevância na banca, pelo que mais caiu nas provas dos últimos 5 anos, seus acertos e o link direto pras questões daquele tópico."><button class="slide-btn" type="button" data-i="2" aria-label="Ampliar: O edital inteiro, por assunto"><img src="tela-3.jpg" alt="O edital inteiro, por assunto: Cada assunto com a relevância na banca, pelo que mais caiu nas provas dos últimos 5 anos, seus acertos e o link direto pras questões daquele tópico." loading="lazy" width="1600" height="830"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+    <li class="slide" data-titulo="Ele te avisa a hora de revisar" data-texto="Cada assunto estudado ganha até 3 revisões e a data da próxima. Nada de estudar tudo e esquecer até a prova."><button class="slide-btn" type="button" data-i="3" aria-label="Ampliar: Ele te avisa a hora de revisar"><img src="tela-4.jpg" alt="Ele te avisa a hora de revisar: Cada assunto estudado ganha até 3 revisões e a data da próxima. Nada de estudar tudo e esquecer até a prova." loading="lazy" width="1600" height="858"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+    <li class="slide" data-titulo="Simulados do tamanho da prova" data-texto="Simulados com o número de questões da sua prova. Você lança acertos e erros e acompanha a evolução de um simulado pro outro."><button class="slide-btn" type="button" data-i="4" aria-label="Ampliar: Simulados do tamanho da prova"><img src="tela-5.jpg" alt="Simulados do tamanho da prova: Simulados com o número de questões da sua prova. Você lança acertos e erros e acompanha a evolução de um simulado pro outro." loading="lazy" width="1600" height="854"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+    <li class="slide" data-titulo="Veja onde precisa melhorar" data-texto="Seu desempenho em cada disciplina e em cada simulado, pra saber onde colocar mais energia."><button class="slide-btn" type="button" data-i="5" aria-label="Ampliar: Veja onde precisa melhorar"><img src="tela-6.jpg" alt="Veja onde precisa melhorar: Seu desempenho em cada disciplina e em cada simulado, pra saber onde colocar mais energia." loading="lazy" width="1600" height="827"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
+    <li class="slide" data-titulo="Cronômetro dentro da plataforma" data-texto="Pomodoro, pausas e timer livre. O tempo vai direto pro seu total de horas estudadas."><button class="slide-btn" type="button" data-i="6" aria-label="Ampliar: Cronômetro dentro da plataforma"><img src="tela-7.jpg" alt="Cronômetro dentro da plataforma: Pomodoro, pausas e timer livre. O tempo vai direto pro seu total de horas estudadas." loading="lazy" width="680" height="854"><span class="lupa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg></span></button></li>
   </ul>
   <div class="wrap">
+    <div class="legenda" id="legenda" aria-live="polite"><h3 id="leg-t">Tudo num painel só</h3><p id="leg-x">Dias até a prova, desempenho geral, cronograma cumprido, simulados e quanto tempo você estudou de cada disciplina.</p></div>
     <div class="car-ctrl">
       <button class="seta" id="ant" type="button" aria-label="Tela anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="pontos" id="pontos" role="group" aria-label="Escolher tela"></div>
       <button class="seta" id="prox" type="button" aria-label="Próxima tela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
     </div>
-    <p class="dica">Toque na imagem para ampliar.</p>
   </div>
 </section>
 
 <!-- Tela cheia das imagens da plataforma -->
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Imagem ampliada" hidden>
   <div class="lb-topo">
-    <span id="lb-cont">1 de 6</span>
+    <span id="lb-cont">1 de 7</span>
     <button class="lb-btn" id="lb-fechar" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
   <div class="lb-palco" id="lb-palco"><img id="lb-img" src="" alt=""></div>
@@ -660,6 +664,8 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
     atual=i;
     slides.forEach(function(sl,k){sl.classList.toggle('ativo',k===i);});
     [].forEach.call(pontos.children,function(p,k){p.setAttribute('aria-current',String(k===i));});
+    document.getElementById('leg-t').textContent=slides[i].getAttribute('data-titulo');
+    document.getElementById('leg-x').textContent=slides[i].getAttribute('data-texto');
   }
   function ir(i){
     i=(i+slides.length)%slides.length;
@@ -686,7 +692,7 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
   function mostra(i){
     lbI=(i+imgs.length)%imgs.length;
     lbImg.src=imgs[lbI].currentSrc||imgs[lbI].src; lbImg.alt=imgs[lbI].alt;
-    cont.textContent=(lbI+1)+' de '+imgs.length;
+    cont.textContent=(lbI+1)+' de '+imgs.length+' · '+slides[lbI].getAttribute('data-titulo');
     palco.classList.remove('zoom'); palco.scrollTop=0; palco.scrollLeft=0;
   }
   function abre(i){origem=document.activeElement; mostra(i); lb.hidden=false; document.body.style.overflow='hidden'; document.getElementById('lb-fechar').focus();}
