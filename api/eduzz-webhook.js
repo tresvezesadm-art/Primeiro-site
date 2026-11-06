@@ -71,10 +71,13 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, ping: true });
   }
 
-  // Só nos interessa fatura paga. Outros eventos (aberta, cancelada,
-  // reembolsada etc.) são ignorados por enquanto, mas retornam 200
+  // Fatura paga libera o curso. Reembolso ou chargeback tira o acesso.
+  // Os outros eventos (aberta, expirada etc.) são ignorados, mas retornam 200
   // pra Eduzz não ficar reenviando.
-  if (payload.event !== 'myeduzz.invoice_paid') {
+  const nomeEvento = String(payload.event || '');
+  const ehPagamento = nomeEvento === 'myeduzz.invoice_paid';
+  const ehReembolso = /refund|chargeback|estorn|reembols/i.test(nomeEvento);
+  if (!ehPagamento && !ehReembolso) {
     console.log('eduzz-webhook evento ignorado:', payload.event);
     return res.status(200).json({ ok: true, ignorado: payload.event });
   }
@@ -86,7 +89,7 @@ export default async function handler(req, res) {
   const itens = dadosFatura.items || dadosFatura.products || [];
 
   // Registro pra conferir no Vercel > Logs o que a Eduzz realmente enviou (sem dados pessoais).
-  console.log('eduzz-webhook invoice_paid', JSON.stringify({
+  console.log('eduzz-webhook ' + (ehReembolso ? 'reembolso ' + nomeEvento : 'invoice_paid'), JSON.stringify({
     chavesData: Object.keys(dadosFatura),
     temEmail: !!email,
     itens: itens.map((i) => ({ chaves: Object.keys(i), ids: idsDoItem(i) })),
@@ -124,6 +127,20 @@ export default async function handler(req, res) {
     let alunoId = null;
     const { data: perfilExistente } = await supabaseAdmin
       .from('perfis').select('id').eq('email', email).maybeSingle();
+
+    // Reembolso ou chargeback: só desativa o acesso (o progresso do aluno fica guardado).
+    if (ehReembolso) {
+      if (!perfilExistente) {
+        resultados.push({ email, curso: cursoSlug, revogado: false, motivo: 'aluno sem conta' });
+        continue;
+      }
+      const { error: erroRevoga } = await supabaseAdmin.from('acessos')
+        .update({ ativo: false })
+        .eq('aluno_id', perfilExistente.id).eq('curso_id', curso.id);
+      console.log('eduzz-webhook acesso revogado:', erroRevoga ? 'erro ' + erroRevoga.message : 'ok');
+      resultados.push({ email, curso: cursoSlug, revogado: !erroRevoga, erro: erroRevoga ? erroRevoga.message : null });
+      continue;
+    }
 
     if (perfilExistente) {
       alunoId = perfilExistente.id;
