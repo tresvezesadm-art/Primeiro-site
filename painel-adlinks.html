@@ -331,6 +331,13 @@
   .tempo-tabs{display:inline-flex; background:var(--cream); padding:3px; border-radius:10px; gap:2px;}
   .tempo-tabs button{border:none; background:transparent; color:var(--muted); padding:6px 12px; border-radius:7px; font-size:11px; font-weight:800; cursor:pointer;}
   .tempo-tabs button.active{background:var(--navy-dark); color:#fff;}
+  .tempo-tabs{flex-wrap:wrap; justify-content:flex-end;}
+  .tempo-intervalo{display:none; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:18px; padding-bottom:16px; border-bottom:1px solid var(--border);}
+  .tempo-intervalo.aberto{display:flex;}
+  .tempo-intervalo label{display:flex; flex-direction:column; gap:5px; font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase;}
+  .tempo-intervalo input[type=date]{border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--ink); background:#fff;}
+  .tempo-intervalo-aviso{flex-basis:100%; font-size:12px; font-weight:600; color:#C0504D; min-height:0;}
+  .tempo-sub{text-align:center; font-size:12px; font-weight:600; color:var(--muted); margin:-14px 0 16px;}
   .tempo-total{font-family:'Outfit',sans-serif; font-size:26px; font-weight:800; color:var(--navy-deeper); text-align:center; margin:14px 0 20px;}
   .tempo-legenda{display:flex; flex-direction:column; gap:10px;}
   .tempo-legenda-row{display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; color:var(--ink);}
@@ -444,15 +451,22 @@
             <button data-periodo="semana">SEMANA</button>
             <button data-periodo="mes">MÊS</button>
             <button data-periodo="total">TOTAL</button>
+            <button data-periodo="personalizado">PERÍODO</button>
           </div>
         </div>
         <div class="card">
+          <div class="tempo-intervalo" id="tempoIntervalo">
+            <label>De <input type="date" id="tempoDe"></label>
+            <label>Até <input type="date" id="tempoAte"></label>
+            <div class="tempo-intervalo-aviso" id="tempoAviso"></div>
+          </div>
           <div class="grid cols-2" style="align-items:center;">
             <div style="position:relative; width:100%; max-width:230px; margin:0 auto;">
               <canvas id="graficoTempoEstudo" width="230" height="230"></canvas>
             </div>
             <div>
               <div class="tempo-total" id="tempoTotalTexto">0min</div>
+              <div class="tempo-sub" id="tempoSubTexto"></div>
               <div class="tempo-legenda" id="tempoLegenda"></div>
             </div>
           </div>
@@ -823,9 +837,36 @@ function formatarDuracao(segundos){
   if(h<=0) return `${m}min`;
   return `${h}h${m.toString().padStart(2,'0')}min`;
 }
+/* período personalizado: datas escolhidas pela aluna (formato AAAA-MM-DD, no fuso local) */
+function dataLocalDeIso(iso, fimDoDia){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||'')) return null;
+  const [a,m,d] = iso.split('-').map(Number);
+  return fimDoDia ? new Date(a, m-1, d, 23, 59, 59, 999) : new Date(a, m-1, d, 0, 0, 0, 0);
+}
+function isoLocal(dt){
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function formatarDataBr(iso){ const [a,m,d]=iso.split('-'); return `${d}/${m}/${a}`; }
+function lerIntervaloPersonalizado(){
+  const deIso = document.getElementById('tempoDe').value;
+  const ateIso = document.getElementById('tempoAte').value;
+  const ini = dataLocalDeIso(deIso,false), fim = dataLocalDeIso(ateIso,true);
+  return { deIso, ateIso, ini, fim, valido: !!(ini && fim && ini <= fim) };
+}
+function garantirIntervaloPadrao(){
+  const de = document.getElementById('tempoDe'), ate = document.getElementById('tempoAte');
+  const agora = new Date();
+  if(!ate.value) ate.value = isoLocal(agora);
+  if(!de.value) de.value = isoLocal(new Date(agora.getFullYear(), agora.getMonth(), 1));
+}
 function filtrarSessoesPorPeriodo(periodo){
   const agora = new Date();
   const hojeInicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  if(periodo==='personalizado'){
+    const iv = lerIntervaloPersonalizado();
+    if(!iv.valido) return [];
+    return SESSOES_ESTUDO.filter(s=>{ const d = new Date(s.criado_em); return d >= iv.ini && d <= iv.fim; });
+  }
   return SESSOES_ESTUDO.filter(s=>{
     const d = new Date(s.criado_em);
     if(periodo==='hoje') return d >= hojeInicio;
@@ -888,6 +929,21 @@ function renderTempoEstudo(periodo){
   tempoEstudoPeriodoAtual = periodo;
   document.querySelectorAll('#tempoTabs button').forEach(b=> b.classList.toggle('active', b.dataset.periodo===periodo));
 
+  const personalizado = periodo==='personalizado';
+  document.getElementById('tempoIntervalo').classList.toggle('aberto', personalizado);
+  const elAviso = document.getElementById('tempoAviso');
+  const elSub = document.getElementById('tempoSubTexto');
+  elAviso.textContent = ''; elSub.textContent = '';
+  if(personalizado){
+    garantirIntervaloPadrao();
+    const iv = lerIntervaloPersonalizado();
+    if(!iv.valido){
+      elAviso.textContent = (iv.ini && iv.fim) ? 'A data inicial precisa ser antes da data final.' : 'Escolha a data inicial e a data final.';
+    } else {
+      elSub.textContent = iv.deIso===iv.ateIso ? formatarDataBr(iv.deIso) : `${formatarDataBr(iv.deIso)} a ${formatarDataBr(iv.ateIso)}`;
+    }
+  }
+
   const sessoes = filtrarSessoesPorPeriodo(periodo);
   const porChave = {};
   let totalSegundos = 0;
@@ -904,7 +960,7 @@ function renderTempoEstudo(periodo){
   if(graficoTempoEstudo){ graficoTempoEstudo.destroy(); graficoTempoEstudo = null; }
 
   if(entradas.length===0){
-    document.getElementById('tempoLegenda').innerHTML = `<div style="color:var(--muted); font-size:12.5px;">Nenhuma sessão de estudo registrada nesse período. Use o relógio no canto da tela pra cronometrar seus estudos.</div>`;
+    document.getElementById('tempoLegenda').innerHTML = `<div style="color:var(--muted); font-size:12.5px;">${personalizado && !lerIntervaloPersonalizado().valido ? 'Ajuste as datas acima pra ver o tempo estudado.' : 'Nenhuma sessão de estudo registrada nesse período.'} Use o relógio no canto da tela pra cronometrar seus estudos.</div>`;
     return;
   }
 
@@ -928,6 +984,7 @@ function renderTempoEstudo(periodo){
     </div>`;
   }).join('');
 }
+['tempoDe','tempoAte'].forEach(id=> document.getElementById(id).addEventListener('change', ()=> renderTempoEstudo('personalizado')));
 document.getElementById('tempoTabs').addEventListener('click', e=>{
   const btn = e.target.closest('button[data-periodo]');
   if(btn) renderTempoEstudo(btn.dataset.periodo);
