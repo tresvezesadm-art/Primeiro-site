@@ -166,6 +166,12 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:-0
 .check li{display:flex;gap:10px;align-items:flex-start;font-size:15px}
 .check svg{width:18px;height:18px;flex:none;margin-top:3px;color:var(--ouro-texto)}
 .plat-corpo .btn{margin-top:auto}
+.plataformas .duas{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.plat-corpo .acoes{flex-direction:column;margin-top:0}
+.plat-corpo .acoes .btn{flex:none;margin-top:0;min-height:48px;padding:0 14px;font-size:14px;text-align:center}
+@media (min-width:1080px){.plataformas .plat-capa h3{font-size:30px}}
+.plat-corpo .preco{margin-top:auto}
+#maranhao-unificado{scroll-margin-top:96px}
 .nota{margin:28px auto 0;text-align:center;font-size:14px;color:var(--cinza)}
 
 /* Recursos (faixa azul) */
@@ -261,8 +267,8 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
 <div class="aviso">
   <div class="wrap">
     <span class="tag">Novo</span>
-    <span>Novo pós-edital EPPGG BA no ADLinks Plataforma.</span>
-    <a href="#plataformas">Conhecer →</a>
+    <span>Novo pós-edital Maranhão Unificado no ADLinks Plataforma.</span>
+    <a href="#maranhao-unificado">Conhecer →</a>
   </div>
 </div>
 
@@ -378,9 +384,33 @@ details p{margin:0;padding:0 22px 18px;color:var(--cinza)}
     </div>
     <div class="duas">
 
+      <article class="plat" id="maranhao-unificado">
+        <div class="plat-capa">
+          <div class="chips"><span class="chip destaque">Novo</span><span class="chip">Pós-edital</span><span class="chip">FCC</span></div>
+          <div>
+            <small>No ADLinks Plataforma</small>
+            <h3>Maranhão Unificado</h3>
+            <p>SEPLAN-MA. Escolha o seu cargo.</p>
+          </div>
+        </div>
+        <div class="plat-corpo">
+          <ul class="check">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Edital verticalizado, com os tópicos de cada disciplina</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Cronograma, revisões e simulados</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Relevância dos assuntos na FCC</li>
+          </ul>
+          <div class="preco"><b>R$ 197</b><span>cada cargo</span></div>
+          <div class="acoes">
+            <a class="btn btn-ouro" href="https://chk.eduzz.com/797ZNO540E">Quero Especialista em Gestão Pública</a>
+            <a class="btn btn-ouro" href="https://chk.eduzz.com/7WXGJDKG0A">Quero Planejamento e Orçamento</a>
+            <a class="btn btn-ouro" href="https://chk.eduzz.com/8017XONQ07">Quero Finanças e Controle</a>
+          </div>
+        </div>
+      </article>
+
       <article class="plat">
         <div class="plat-capa">
-          <div class="chips"><span class="chip destaque">Novo</span><span class="chip">Pós-edital</span><span class="chip">Cesgranrio</span></div>
+          <div class="chips"><span class="chip">Pós-edital</span><span class="chip">Cesgranrio</span></div>
           <div>
             <small>No ADLinks Plataforma</small>
             <h3>EPPGG BA</h3>
