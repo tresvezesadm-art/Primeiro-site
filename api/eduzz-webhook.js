@@ -16,6 +16,9 @@ export const config = {
 const PRODUTO_PARA_CURSO = {
   '3088563': 'pre-edital-cgu',
   '3121125': 'pos-edital-eppgg-ba',
+  '3155099': 'pos-edital-ma-seplan-egp',
+  '3155098': 'pos-edital-ma-seplan-apfp-fc',
+  '3155097': 'pos-edital-ma-seplan-apfp-po',
 };
 
 function lerCorpoCru(req) {
